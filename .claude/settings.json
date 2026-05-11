@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/wamp64/www/**)",
+      "Bash(composer create-project *)",
+      "Bash(php artisan *)"
+    ]
+  }
+}
