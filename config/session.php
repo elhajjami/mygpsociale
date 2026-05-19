@@ -32,7 +32,7 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env('SESSION_LIFETIME', 1440),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
@@ -114,7 +114,7 @@ return [
     |
     */
 
-    'lottery' => [2, 100],
+    'lottery' => [1, 100],
 
     /*
     |--------------------------------------------------------------------------
@@ -229,5 +229,18 @@ return [
     */
 
     'serialization' => 'json',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session ID Rotation
+    |--------------------------------------------------------------------------
+    |
+    | Some applications rotate the session ID on every request for increased
+    | security. You can enable this behavior if desired. However, this can
+    | cause issues with AJAX requests and should be used with caution.
+    |
+    */
+
+    'rotate' => false,
 
 ];

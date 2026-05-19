@@ -11,6 +11,8 @@ class AyantDroit extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'ayant_droits';
+
     protected $fillable = [
         'agent_id',
         'type',

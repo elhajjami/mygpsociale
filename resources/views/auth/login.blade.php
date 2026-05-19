@@ -238,18 +238,12 @@
                             @enderror
                         </div>
 
-                        <!-- Remember Me & Forgot Password -->
-                        <div class="flex items-center justify-between">
+                        <!-- Remember Me -->
+                        <div class="flex items-center justify-start">
                             <label class="flex items-center cursor-pointer">
                                 <input type="checkbox" name="remember" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
                                 <span class="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
                             </label>
-
-                            @if (Route::has('password.request'))
-                                <a href="{{ route('password.request') }}" class="text-sm text-green-600 hover:text-green-700 font-medium">
-                                    Mot de passe oublié ?
-                                </a>
-                            @endif
                         </div>
 
                         <!-- Submit Button -->

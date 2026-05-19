@@ -4,14 +4,14 @@ namespace App\Services;
 
 use App\Models\Agent;
 use App\Models\DemandePEC;
-use App\Models\PlafondAnnuel;
+use App\Models\PlafondAnnuelAgent;
 
 class PlafondService
 {
     /**
      * Vérifier si un agent a un plafond suffisant pour une demande
      */
-    public function verifierPlafond(int $agentId, float $montantDemande): array
+    public function verifierPlafond(int $agentId, float $montantDemande, string $typePrestation = 'medical'): array
     {
         $agent = Agent::find($agentId);
 
@@ -21,27 +21,46 @@ class PlafondService
                 'message' => 'Agent non trouvé',
                 'plafond_annuel' => 0,
                 'montant_consome' => 0,
-                'montant_engage' => 0,
                 'reste_disponible' => 0,
             ];
         }
 
-        $plafond = PlafondAnnuel::pourAgent($agentId);
+        $plafond = PlafondAnnuelAgent::obtenirOuCreer($agentId);
 
-        $resteDisponible = $plafond->plafond_annuel - $plafond->montant_consome - $plafond->montant_engage;
+        // Déterminer le type de facture selon la prestation
+        $typeFacture = in_array($typePrestation, ['chirurgie', 'hospitalisation']) ? 'clinique' : 'medical';
+
+        // Pour medical : on considère le montant total
+        // Pour clinique : on considère que la part adhérent sera d'environ 20-30% (estimation)
+        $montantAConsommer = $typeFacture === 'medical' ? $montantDemande : ($montantDemande * 0.3);
+
+        if ($typeFacture === 'medical') {
+            $resteDisponible = $plafond->reste_medical;
+            $montantConsome = $plafond->consomme_medical;
+        } else {
+            $resteDisponible = $plafond->reste_clinique;
+            $montantConsome = $plafond->consomme_clinique;
+        }
+
+        $resteApresDemande = $resteDisponible - $montantAConsommer;
 
         $resultat = [
-            'succes' => $resteDisponible >= $montantDemande,
-            'message' => $resteDisponible >= $montantDemande
+            'succes' => $resteApresDemande >= 0,
+            'message' => $resteApresDemande >= 0
                 ? 'Plafond suffisant'
                 : 'Plafond insuffisant',
             'plafond_annuel' => $plafond->plafond_annuel,
-            'montant_consome' => $plafond->montant_consome,
-            'montant_engage' => $plafond->montant_engage,
+            'montant_consome' => $montantConsome,
             'reste_disponible' => $resteDisponible,
+            'reste_apres_demande' => max(0, $resteApresDemande),
             'montant_demande' => $montantDemande,
-            'depassement' => $montantDemande > $resteDisponible ? $montantDemande - $resteDisponible : 0,
+            'montant_a_consommer' => $montantAConsommer,
+            'depassement' => $resteApresDemande < 0 ? abs($resteApresDemande) : 0,
+            'type_facture' => $typeFacture,
             'agent' => $agent,
+            'pourcentage_utilise' => $typeFacture === 'medical'
+                ? $plafond->pourcentage_utilisation_medical
+                : $plafond->pourcentage_utilisation_clinique,
         ];
 
         return $resultat;
@@ -49,35 +68,23 @@ class PlafondService
 
     /**
      * Engager un montant sur le plafond d'un agent (lors de la validation d'une demande)
+     * Note: cette méthode n'est plus utilisée avec le nouveau système
      */
-    public function engagerMontant(int $agentId, float $montant): PlafondAnnuel
+    public function engagerMontant(int $agentId, float $montant): PlafondAnnuelAgent
     {
-        $plafond = PlafondAnnuel::pourAgent($agentId);
-        $plafond->ajouterEngage($montant);
-
-        return $plafond->refresh();
-    }
-
-    /**
-     * Confirmer un montant engagé (lors du paiement effectif)
-     */
-    public function confirmerEngagement(int $agentId, float $montant): PlafondAnnuel
-    {
-        $plafond = PlafondAnnuel::pourAgent($agentId);
-        $plafond->confirmerEngage($montant);
-
-        return $plafond->refresh();
+        // Avec le nouveau système, on ne crée plus d'engagement
+        // Le plafond est mis à jour uniquement lors de la facturation
+        return PlafondAnnuelAgent::obtenirOuCreer($agentId);
     }
 
     /**
      * Annuler un montant engagé (rejet de demande ou annulation)
+     * Note: cette méthode n'est plus utilisée avec le nouveau système
      */
-    public function annulerEngagement(int $agentId, float $montant): PlafondAnnuel
+    public function annulerEngagement(int $agentId, float $montant): PlafondAnnuelAgent
     {
-        $plafond = PlafondAnnuel::pourAgent($agentId);
-        $plafond->annulerEngage($montant);
-
-        return $plafond->refresh();
+        // Avec le nouveau système, on n'annule plus d'engagement
+        return PlafondAnnuelAgent::obtenirOuCreer($agentId);
     }
 
     /**
@@ -87,133 +94,158 @@ class PlafondService
     {
         $annee = $annee ?? now()->year;
         $agent = Agent::find($agentId);
-        $plafond = PlafondAnnuel::pourAgent($agentId, $annee);
+        $plafond = PlafondAnnuelAgent::obtenirOuCreer($agentId, $annee);
 
         return [
             'agent' => $agent,
             'annee' => $annee,
             'plafond_annuel' => $plafond->plafond_annuel,
-            'montant_consome' => $plafond->montant_consome,
-            'montant_engage' => $plafond->montant_engage,
-            'reste_disponible' => $plafond->reste_disponible,
-            'pourcentage_consomme' => $plafond->pourcentage_consomme,
-            'pourcentage_engage' => $plafond->pourcentage_engage,
+            'consomme_medical' => $plafond->consomme_medical,
+            'consomme_clinique' => $plafond->consomme_clinique,
+            'reste_medical' => $plafond->reste_medical,
+            'reste_clinique' => $plafond->reste_clinique,
+            'pourcentage_utilisation_medical' => $plafond->pourcentage_utilisation_medical,
+            'pourcentage_utilisation_clinique' => $plafond->pourcentage_utilisation_clinique,
         ];
     }
 
     /**
-     * Obtenir les alertes de plafond (agents ayant dépassé 80% de leur plafond)
+     * Obtenir le plafond annuel d'un agent pour l'année courante
+     */
+    public function getPlafondAgent(int $agentId): ?PlafondAnnuelAgent
+    {
+        return PlafondAnnuelAgent::obtenirOuCreer($agentId);
+    }
+
+    /**
+     * Vérifier si un agent a suffisamment de plafond disponible
+     */
+    public function verifierPlafondDisponible(int $agentId, float $montant, string $typePrestation = 'medical'): bool
+    {
+        $resultat = $this->verifierPlafond($agentId, $montant, $typePrestation);
+        return $resultat['succes'];
+    }
+
+    /**
+     * Mettre à jour le plafond après facturation
+     */
+    public function mettreAJourPlafond(int $agentId, float $montant, string $typeFacture): void
+    {
+        $plafond = PlafondAnnuelAgent::obtenirOuCreer($agentId);
+
+        if ($typeFacture === 'medical') {
+            $plafond->ajouterConsommationMedical($montant);
+        } elseif ($typeFacture === 'clinique') {
+            // Pour clinique, le montant passé doit être la part adhérent
+            $plafond->ajouterConsommationClinique($montant);
+        }
+    }
+
+    /**
+     * Convertir un engagement en consommation (non utilisé avec nouveau système)
+     */
+    public function convertirEngagementEnConsommation(int $agentId, float $montant): void
+    {
+        // Plus nécessaire avec le nouveau système
+    }
+
+    /**
+     * Obtenir les alertes de plafond pour les agents ayant dépassé 80% de leur plafond
      */
     public function getAlertesPlafond(int $annee = null): array
     {
         $annee = $annee ?? now()->year;
         $alertes = [];
 
-        $plafonds = PlafondAnnuel::where('annee', $annee)->get();
+        // Récupérer tous les plafonds annuels pour l'année spécifiée
+        $plafonds = PlafondAnnuelAgent::where('annee', $annee)
+            ->with('agent')
+            ->get();
 
         foreach ($plafonds as $plafond) {
-            $pourcentage = $plafond->pourcentage_engage;
+            $pourcentageMedical = $plafond->pourcentage_utilisation_medical;
+            $pourcentageClinique = $plafond->pourcentage_utilisation_clinique;
 
-            if ($pourcentage >= 100) {
+            // Alerte si plus de 80% utilisé
+            if ($pourcentageMedical > 80) {
                 $alertes[] = [
-                    'type' => 'critique',
-                    'agent' => $plafond->agent,
-                    'plafond' => $plafond,
-                    'message' => 'Plafond dépassé',
+                    'type' => 'medical',
+                    'agent_id' => $plafond->agent_id,
+                    'agent' => [
+                        'nom' => $plafond->agent?->nom ?? 'N/A',
+                        'prenom' => $plafond->agent?->prenom ?? '',
+                        'categorie' => $plafond->agent?->categorie ?? 'N/A',
+                    ],
+                    'matricule' => $plafond->agent?->matricule ?? 'N/A',
+                    'pourcentage' => $pourcentageMedical,
+                    'reste' => $plafond->reste_medical,
+                    'plafond_annuel' => $plafond->plafond_annuel,
+                    'niveau' => $pourcentageMedical > 95 ? 'critique' : 'avertissement',
+                    'severite' => $pourcentageMedical > 95 ? 'critique' : 'avertissement',
                 ];
-            } elseif ($pourcentage >= 90) {
+            }
+
+            if ($pourcentageClinique > 80) {
                 $alertes[] = [
-                    'type' => 'urgent',
-                    'agent' => $plafond->agent,
-                    'plafond' => $plafond,
-                    'message' => 'Plafond bientôt épuisé',
-                ];
-            } elseif ($pourcentage >= 80) {
-                $alertes[] = [
-                    'type' => 'avertissement',
-                    'agent' => $plafond->agent,
-                    'plafond' => $plafond,
-                    'message' => 'Plafond à plus de 80%',
+                    'type' => 'clinique',
+                    'agent_id' => $plafond->agent_id,
+                    'agent' => [
+                        'nom' => $plafond->agent?->nom ?? 'N/A',
+                        'prenom' => $plafond->agent?->prenom ?? '',
+                        'categorie' => $plafond->agent?->categorie ?? 'N/A',
+                    ],
+                    'matricule' => $plafond->agent?->matricule ?? 'N/A',
+                    'pourcentage' => $pourcentageClinique,
+                    'reste' => $plafond->reste_clinique,
+                    'plafond_annuel' => $plafond->plafond_annuel,
+                    'niveau' => $pourcentageClinique > 95 ? 'critique' : 'avertissement',
+                    'severite' => $pourcentageClinique > 95 ? 'critique' : 'avertissement',
                 ];
             }
         }
+
+        // Trier par sévérité puis par pourcentage décroissant
+        usort($alertes, function($a, $b) {
+            if ($a['severite'] !== $b['severite']) {
+                return $a['severite'] === 'critique' ? -1 : 1;
+            }
+            return $b['pourcentage'] <=> $a['pourcentage'];
+        });
 
         return $alertes;
     }
 
     /**
-     * Initialiser les plafonds annuels pour tous les agents
+     * Initialiser les plafonds annuels pour tous les agents de l'année courante
      */
     public function initialiserPlafondsAnnee(int $annee = null): int
     {
         $annee = $annee ?? now()->year;
         $compteur = 0;
 
-        Agent::actifs()->chunk(100, function ($agents) use ($annee, &$compteur) {
-            foreach ($agents as $agent) {
-                $plafond = PlafondAnnuel::firstOrCreate(
-                    [
-                        'agent_id' => $agent->id,
-                        'annee' => $annee,
-                    ],
-                    [
-                        'plafond_annuel' => $agent->plafond_annuel,
-                        'montant_consome' => 0,
-                        'montant_engage' => 0,
-                        'reste_disponible' => $agent->plafond_annuel,
-                    ]
-                );
+        $agents = Agent::all();
 
-                if ($plafond->wasRecentlyCreated) {
-                    $compteur++;
-                }
+        foreach ($agents as $agent) {
+            // Vérifier si le plafond existe déjà
+            $existant = PlafondAnnuelAgent::where('agent_id', $agent->id)
+                ->where('annee', $annee)
+                ->first();
+
+            if (!$existant) {
+                $plafondAnnuel = $agent->plafond_annuel ?? 12000;
+
+                PlafondAnnuelAgent::create([
+                    'agent_id' => $agent->id,
+                    'annee' => $annee,
+                    'plafond_annuel' => $plafondAnnuel,
+                    'consomme' => 0,
+                    'reste' => $plafondAnnuel,
+                ]);
+
+                $compteur++;
             }
-        });
+        }
 
         return $compteur;
-    }
-
-    /**
-     * Obtenir le plafond annuel d'un agent pour l'année courante
-     */
-    public function getPlafondAgent(int $agentId): ?PlafondAnnuel
-    {
-        return PlafondAnnuel::pourAgent($agentId);
-    }
-
-    /**
-     * Vérifier si un agent a suffisamment de plafond disponible
-     */
-    public function verifierPlafondDisponible(int $agentId, float $montant): bool
-    {
-        $resultat = $this->verifierPlafond($agentId, $montant);
-        return $resultat['succes'];
-    }
-
-    /**
-     * Mettre à jour le plafond (engagement ou consommation)
-     */
-    public function mettreAJourPlafond(int $agentId, float $montant, string $type): void
-    {
-        if ($type === 'engagement') {
-            $this->engagerMontant($agentId, $montant);
-        } elseif ($type === 'consommation') {
-            $this->confirmerEngagement($agentId, $montant);
-        }
-    }
-
-    /**
-     * Convertir un engagement en consommation
-     */
-    public function convertirEngagementEnConsommation(int $agentId, float $montant): void
-    {
-        $plafond = PlafondAnnuel::pourAgent($agentId);
-
-        if (!$plafond) {
-            throw new \Exception("Aucun plafond trouvé pour l'agent {$agentId}");
-        }
-
-        $plafond->decrement('montant_engage', $montant);
-        $plafond->increment('montant_consome', $montant);
     }
 }

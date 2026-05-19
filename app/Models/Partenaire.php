@@ -16,11 +16,23 @@ class Partenaire extends Model
         'type_structure',
         'ville',
         'specialite',
+        'telephone',
+        'email',
         'date_effet',
         'date_fin',
         'statut',
         'coordonnees',
         'observations',
+        // Champs facturation
+        'adresse',
+        'fax',
+        'rib',
+        'banque',
+        'agence',
+        'ice',
+        'patente',
+        'if',
+        'cnss',
     ];
 
     protected $casts = [

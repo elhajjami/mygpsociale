@@ -74,7 +74,7 @@ class RoleController extends Controller
     public function show(Role $role)
     {
         $role->load('permissions', 'users');
-        $allPermissions = Permission::orderBy('module')->orderBy('name')->get();
+        $allPermissions = Permission::orderBy('name')->get();
         return view('admin.roles.show', compact('role', 'allPermissions'));
     }
 

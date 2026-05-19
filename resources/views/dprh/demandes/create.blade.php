@@ -23,6 +23,53 @@
         <form method="POST" action="{{ route('dprh.demandes.store') }}" id="demandeForm">
             @csrf
 
+            <!-- Affichage des erreurs de validation -->
+            @if($errors->any())
+                <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-red-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <h3 class="text-sm font-medium text-red-800 mb-2">
+                                {{ $errors->count() > 1 ? $errors->count() . ' erreurs détectées' : 'Erreur détectée' }} - Veuillez corriger :
+                            </h3>
+                            <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="text-sm text-red-800">
+                            {{ session('error') }}
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if(session('success'))
+                <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="text-sm text-green-800">
+                            {{ session('success') }}
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="space-y-6">
                 <!-- Section Agent -->
                 <div class="border-b pb-6">
@@ -57,7 +104,7 @@
 
                     <!-- Infos agent affichées -->
                     <div id="agent_info" class="mt-4 hidden p-4 bg-gray-50 rounded-lg">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
                             <div>
                                 <span class="text-gray-500">Matricule:</span>
                                 <span id="info_matricule" class="font-medium">-</span>
@@ -70,9 +117,42 @@
                                 <span class="text-gray-500">Catégorie:</span>
                                 <span id="info_categorie" class="font-medium">-</span>
                             </div>
-                            <div>
-                                <span class="text-gray-500">Plafond disponible:</span>
-                                <span id="info_plafond" class="font-medium text-green-600">-</span>
+                        </div>
+
+                        <!-- Plafond annuel -->
+                        <div id="plafond_info" class="border-t pt-3 mt-3">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Plafond Annuel {{ now()->year }}</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500">Plafond total:</span>
+                                    <span id="plafond_total" class="font-medium">-</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Consommé médical:</span>
+                                    <span id="consomme_medical" class="font-medium">-</span>
+                                    <span id="pourcentage_medical" class="text-xs text-gray-400"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Reste médical:</span>
+                                    <span id="reste_medical" class="font-medium text-green-600">-</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Reste clinique:</span>
+                                    <span id="reste_clinique" class="font-medium text-blue-600">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alerte dépassement -->
+                        <div id="plafond_alert" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex">
+                                <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                <div class="text-sm text-red-800">
+                                    <p class="font-medium">Attention: Plafond insuffisant</p>
+                                    <p id="plafond_alert_message">Le montant dépasse le plafond disponible.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -109,9 +189,12 @@
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Partenaire *</label>
                             <select name="partenaire_id" id="partenaire_id" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full px-3 py-2 border @error('partenaire_id') border-red-500 @enderror border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">Sélectionner d'abord ville et type</option>
                             </select>
+                            @error('partenaire_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
                 </div>
@@ -128,14 +211,14 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Montant du devis (DH) *</label>
-                            <input type="number" name="montant_devis" step="0.01" min="0" required
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Montant du devis (DH)</label>
+                            <input type="number" name="montant_devis" step="0.01" min="0"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Type de prestation</label>
-                            <select name="type_prestation"
+                            <select name="type_prestation" id="type_prestation"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                                 <option value="consultation">Consultation</option>
                                 <option value="analyse">Analyse</option>
@@ -144,6 +227,13 @@
                                 <option value="chirurgie">Chirurgie</option>
                                 <option value="autre">Autre</option>
                             </select>
+                        </div>
+
+                        <div class="md:col-span-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nature des examens *</label>
+                            <input type="text" name="nature_examens" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Ex: Analyse sanguine, Radiographie, Consultation cardiologie...">
                         </div>
 
                         <div class="md:col-span-3">
@@ -183,6 +273,10 @@
 
 @push('scripts')
 <script>
+    // Variables globales pour stocker les infos de plafond
+    let plafondData = null;
+    let selectedAgentId = null;
+
     // Type de bénéficiaire
     document.getElementById('type_beneficiaire').addEventListener('change', function() {
         const havingDroitGroup = document.getElementById('ayant_droit_group');
@@ -229,13 +323,16 @@
                             document.getElementById('agent_id').value = agent.id;
                             document.getElementById('agent_search').value = `${agent.matricule} - ${agent.nom_complet}`;
                             resultsDiv.classList.add('hidden');
+                            selectedAgentId = agent.id;
 
                             // Afficher infos agent
                             document.getElementById('info_matricule').textContent = agent.matricule;
                             document.getElementById('info_nom').textContent = agent.nom_complet;
                             document.getElementById('info_categorie').textContent = agent.categorie || '-';
-                            document.getElementById('info_plafond').textContent = agent.plafond_restant || '-';
                             document.getElementById('agent_info').classList.remove('hidden');
+
+                            // Charger les infos de plafond
+                            loadPlafondInfo(agent.id);
 
                             // Charger ayants droit
                             loadAyantsDroit(agent.id);
@@ -246,6 +343,91 @@
                 });
         }, 300);
     });
+
+    // Charger les informations de plafond
+    function loadPlafondInfo(agentId) {
+        fetch(`{{ route('dprh.demandes.api.plafond-agent') }}?agent_id=${agentId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            plafondData = data;
+
+            // Masquer l'alerte
+            document.getElementById('plafond_alert').classList.add('hidden');
+
+            // Afficher les infos
+            document.getElementById('plafond_total').textContent = formatMontant(data.plafond_annuel) + ' DH';
+            document.getElementById('consomme_medical').textContent = formatMontant(data.consome_medical) + ' DH';
+            document.getElementById('reste_medical').textContent = formatMontant(data.reste_medical) + ' DH';
+            document.getElementById('reste_clinique').textContent = formatMontant(data.reste_clinique) + ' DH';
+
+            // Afficher le pourcentage
+            const pourcentage = data.pourcentage_utilisation_medical || 0;
+            document.getElementById('pourcentage_medical').textContent = `(${pourcentage}%)`;
+
+            // Vérifier le plafond après saisie du montant
+            checkPlafondAfterInput();
+        })
+        .catch(error => {
+            console.error('Erreur chargement plafond:', error);
+        });
+    }
+
+    // Formater un montant
+    function formatMontant(value) {
+        if (value === undefined || value === null) {
+            return '0,00';
+        }
+        return new Intl.NumberFormat('fr-MA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    // Vérifier le plafond après saisie du montant
+    function checkPlafondAfterInput() {
+        if (!plafondData || !selectedAgentId) return;
+
+        const montant = parseFloat(document.querySelector('[name="montant_devis"]').value) || 0;
+        const typePrestation = document.getElementById('type_prestation').value;
+
+        if (montant <= 0) {
+            document.getElementById('plafond_alert').classList.add('hidden');
+            return;
+        }
+
+        // Appeler l'API pour vérifier
+        const params = new URLSearchParams({
+            agent_id: selectedAgentId,
+            montant: montant,
+            type_prestation: typePrestation
+        });
+
+        fetch(`{{ route('dprh.demandes.api.verifier-plafond') }}?${params}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.succes) {
+                // Afficher l'alerte
+                document.getElementById('plafond_alert').classList.remove('hidden');
+                document.getElementById('plafond_alert_message').textContent =
+                    `Dépassement de ${formatMontant(data.depassement)} DH. Reste disponible: ${formatMontant(data.reste_disponible)} DH.`;
+            } else {
+                document.getElementById('plafond_alert').classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur vérification plafond:', error);
+        });
+    }
 
     // Charger les ayants droit
     function loadAyantsDroit(agentId) {
@@ -296,32 +478,168 @@
         });
     }
 
+    // Quand on sélectionne un ayant droit, changer automatiquement le type de bénéficiaire
+    document.getElementById('ayant_droit_id').addEventListener('change', function() {
+        const typeBeneficiaireSelect = document.getElementById('type_beneficiaire');
+        if (this.value && this.value !== '') {
+            // Un ayant droit est sélectionné, changer le type
+            typeBeneficiaireSelect.value = 'ayant_droit';
+            console.log('Type bénéficiaire changé pour: ayant_droit');
+        } else {
+            // Aucun ayant droit sélectionné, revenir à Agent
+            typeBeneficiaireSelect.value = 'agent';
+            console.log('Type bénéficiaire changé pour: agent');
+        }
+    });
+
+    // Types de prestation possibles par type de structure
+    const typesPrestationParType = {
+        'laboratoire': [
+            { value: 'analyse', label: 'Analyse' }
+        ],
+        'médecin': [
+            { value: 'consultation', label: 'Consultation' }
+        ],
+        'clinique': [
+            { value: 'chirurgie', label: 'Chirurgie' },
+            { value: 'consultation', label: 'Consultation' },
+            { value: 'analyse', label: 'Analyse' },
+            { value: 'radiologie', label: 'Radiologie' },
+            { value: 'medicament', label: 'Médicament' },
+            { value: 'autre', label: 'Autre' }
+        ],
+        'radiologie': [
+            { value: 'radiologie', label: 'Radiologie' }
+        ]
+    };
+
+    // Variable pour stocker le type de structure actuel
+    let currentTypeStructure = null;
+
+    // Mettre à jour les options du select type de prestation
+    function updateTypesPrestation(typeStructure) {
+        const select = document.getElementById('type_prestation');
+        const types = typesPrestationParType[typeStructure];
+
+        if (!types) {
+            select.innerHTML = '<option value="">Sélectionner d\'abord le type</option>';
+            return;
+        }
+
+        select.innerHTML = '';
+        types.forEach(function(type) {
+            const option = document.createElement('option');
+            option.value = type.value;
+            option.textContent = type.label;
+            select.appendChild(option);
+        });
+    }
+
+    // Vérifier le plafond lors de la saisie du montant
+    document.querySelector('[name="montant_devis"]').addEventListener('input', checkPlafondAfterInput);
+
+    // Vérifier le plafond lors du changement de type de prestation
+    document.getElementById('type_prestation').addEventListener('change', checkPlafondAfterInput);
+
+    // Variable pour suivre si le formulaire peut être soumis
+    let plafondDepasse = false;
+
+    // Validation avant soumission
+    document.getElementById('demandeForm').addEventListener('submit', function(e) {
+        console.log('Tentative de soumission du formulaire');
+
+        const agentId = document.getElementById('agent_id').value;
+        const partenaireId = document.getElementById('partenaire_id').value;
+
+        console.log('agent_id:', agentId, 'partenaire_id:', partenaireId);
+
+        if (!agentId) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un agent');
+            return false;
+        }
+
+        if (!partenaireId || partenaireId === '') {
+            e.preventDefault();
+            alert('Veuillez sélectionner un partenaire');
+            return false;
+        }
+
+        // Vérification finale du plafond (uniquement si un montant est saisi)
+        if (plafondData) {
+            const montant = parseFloat(document.querySelector('[name="montant_devis"]').value) || 0;
+
+            // Passer la vérification si aucun montant n'est saisi
+            if (montant <= 0) {
+                console.log('Aucun montant saisi, soumission autorisée...');
+                return true;
+            }
+
+            const typePrestation = document.getElementById('type_prestation').value;
+
+            // Déterminer le reste selon le type
+            const resteDisponible = (typePrestation === 'chirurgie' || typePrestation === 'hospitalisation')
+                ? plafondData.reste_clinique
+                : plafondData.reste_medical;
+
+            // Pour clinique, on estime la part adhérent à 30%
+            const montantAConsommer = (typePrestation === 'chirurgie' || typePrestation === 'hospitalisation')
+                ? montant * 0.3
+                : montant;
+
+            if (resteDisponible !== undefined && montantAConsommer > resteDisponible) {
+                e.preventDefault();
+                alert(`Plafond insuffisant !\n\nReste disponible: ${formatMontant(resteDisponible)} DH\nMontant nécessaire: ${formatMontant(montantAConsommer)} DH\nDépassement: ${formatMontant(montantAConsommer - resteDisponible)} DH`);
+                return false;
+            }
+        }
+
+        console.log('Formulaire valide, soumission en cours...');
+        return true;
+    });
+
     // Chargement des partenaires
     function loadPartenaires() {
         const ville = document.getElementById('ville').value;
         const type = document.getElementById('type_structure').value;
+        currentTypeStructure = type;
 
         if (!ville || !type) {
             document.getElementById('partenaire_id').innerHTML = '<option value="">Sélectionner d\'abord ville et type</option>';
             return;
         }
 
-        fetch(`{{ route('admin.partenaires.api.par-ville-type') }}?ville=${encodeURIComponent(ville)}&type=${encodeURIComponent(type)}`)
+        fetch(`{{ route('admin.partenaires.api.par-ville-type') }}?ville=${encodeURIComponent(ville)}&type_structure=${encodeURIComponent(type)}`)
             .then(r => r.json())
             .then(data => {
                 const select = document.getElementById('partenaire_id');
                 select.innerHTML = '<option value="">Sélectionner un partenaire</option>';
-                data.forEach(p => {
+                if (data.length === 0) {
                     const option = document.createElement('option');
-                    option.value = p.id;
-                    option.textContent = p.nom;
+                    option.value = "";
+                    option.textContent = "Aucun partenaire trouvé";
+                    option.disabled = true;
                     select.appendChild(option);
-                });
+                } else {
+                    data.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.nom;
+                        select.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erreur chargement partenaires:', error);
             });
     }
 
     document.getElementById('ville').addEventListener('change', loadPartenaires);
-    document.getElementById('type_structure').addEventListener('change', loadPartenaires);
+    document.getElementById('type_structure').addEventListener('change', function() {
+        const type = this.value;
+        loadPartenaires();
+        updateTypesPrestation(type);
+    });
 
     // Fermer résultats si clic ailleurs
     document.addEventListener('click', (e) => {

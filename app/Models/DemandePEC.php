@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Models\Facture;
+
 class DemandePEC extends Model
 {
     use SoftDeletes;
@@ -19,19 +21,26 @@ class DemandePEC extends Model
         'beneficiaire_type',
         'ayant_droit_id',
         'type_demande',
+        'type_prestation',
         'nature_examens',
         'ville',
+        'type_structure',
         'partenaire_id',
         'specialite',
         'montant_devis',
+        'date_soin',
         'date_devis',
         'fichier_devis',
-        'urgence',
+        'description',
+        'diagnostic',
         'observations',
+        'urgence',
         'statut',
         'motif_rejet',
         'date_validation',
         'date_expiration',
+        'cree_par',
+        'validee_par',
         'created_by',
         'validated_by',
         'date_creation',
@@ -39,6 +48,7 @@ class DemandePEC extends Model
 
     protected $casts = [
         'date_devis' => 'date',
+        'date_soin' => 'date',
         'date_validation' => 'date',
         'date_expiration' => 'date',
         'date_creation' => 'datetime',
@@ -52,6 +62,18 @@ class DemandePEC extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    /**
+     * Accesseur pour obtenir le bénéficiaire (agent ou ayant droit)
+     */
+    public function getBeneficiaireAttribute()
+    {
+        return match($this->beneficiaire_type) {
+            'agent' => $this->agent,
+            'conjoint', 'enfant', 'ayant_droit' => $this->ayantDroit,
+            default => null,
+        };
     }
 
     /**
@@ -92,6 +114,14 @@ class DemandePEC extends Model
     public function paiement(): HasOne
     {
         return $this->hasOne(Paiement::class, 'demande_id');
+    }
+
+    /**
+     * Relation avec la facture
+     */
+    public function facture(): HasOne
+    {
+        return $this->hasOne(Facture::class, 'demande_pec_id');
     }
 
     /**
@@ -145,6 +175,30 @@ class DemandePEC extends Model
     public function estHospitalisation(): bool
     {
         return $this->type_demande === 'hospitalisation';
+    }
+
+    /**
+     * Vérifier si la demande peut être validée
+     */
+    public function peutEtreValidee(): bool
+    {
+        return $this->statut === 'En attente de validation';
+    }
+
+    /**
+     * Vérifier si la demande peut être rejetée
+     */
+    public function peutEtreRejetee(): bool
+    {
+        return $this->statut === 'En attente de validation';
+    }
+
+    /**
+     * Vérifier si la demande peut être modifiée
+     */
+    public function peutEtreModifiee(): bool
+    {
+        return in_array($this->statut, ['En attente de validation', 'Rejetée']);
     }
 
     /**

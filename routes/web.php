@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AgentController;
+use App\Http\Controllers\Admin\AyantDroitController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\ParametreController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\DpRh\DemandeController;
+use App\Http\Controllers\DpRh\FacturationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +65,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/demandes-par-mois', [DashboardController::class, 'apiDemandesParMois'])->name('api.demandes-par-mois');
     Route::get('/api/alertes', [DashboardController::class, 'apiAlertes'])->name('api.alertes');
 
+    // API pour vérifier l'authentification (évite les redirects)
+    Route::get('/api/auth/check', function () {
+        return response()->json([
+            'authenticated' => auth()->check(),
+            'user' => auth()->user() ? auth()->user()->id : null
+        ]);
+    })->name('api.auth.check');
+
     /*
     |--------------------------------------------------------------------------
     | Routes Administration
@@ -101,11 +111,33 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/autocomplete', [AgentController::class, 'autocomplete'])->name('autocomplete');
             Route::get('/par-matricule', [AgentController::class, 'parMatricule'])->name('par-matricule');
 
-            // Route générique APRÈS les routes spécifiques
-            Route::get('/{id}', [AgentController::class, 'show'])->name('show');
+            // Route comparaison - utiliser un paramètre nommé différemment pour éviter les conflits
+            Route::get('/comparaison/{id}', [AgentController::class, 'getComparaisonSap'])
+                ->name('comparaison-sap');
+
+            // Routes avec {id}
             Route::get('/{id}/edit', [AgentController::class, 'edit'])->name('edit');
+            Route::get('/{id}', [AgentController::class, 'show'])->name('show');
             Route::put('/{id}', [AgentController::class, 'update'])->name('update');
             Route::delete('/{id}', [AgentController::class, 'destroy'])->name('destroy');
+
+            // Ayants droit
+            Route::get('/{agentId}/ayants-droit/create', [AyantDroitController::class, 'create'])->name('ayants-droit.create');
+            Route::post('/{agentId}/ayants-droit', [AyantDroitController::class, 'store'])->name('ayants-droit.store');
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ayants droit (routes directes)
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('ayants-droit')->name('ayants-droit.')->group(function () {
+            Route::get('/{id}/edit', [AyantDroitController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [AyantDroitController::class, 'update'])->name('update');
+            Route::delete('/{id}', [AyantDroitController::class, 'destroy'])->name('destroy');
+            Route::post('/{id}/valider', [AyantDroitController::class, 'valider'])->name('valider');
+            Route::post('/{id}/mettre-en-attente', [AyantDroitController::class, 'mettreEnAttente'])->name('mettre-en-attente');
+            Route::post('/{id}/rejeter', [AyantDroitController::class, 'rejeter'])->name('rejeter');
         });
 
         /*
@@ -137,7 +169,10 @@ Route::middleware(['auth'])->group(function () {
             // Agents
             Route::get('/agents', [ImportController::class, 'agents'])->name('agents');
             Route::post('/agents', [ImportController::class, 'importAgents'])->name('agents.import');
+            Route::post('/agents-ayants-droits', [ImportController::class, 'importAgentsAyantsDroits'])->name('agents-ayants-droits.import');
+            Route::post('/cgs', [ImportController::class, 'importCGS'])->name('cgs.import');
             Route::get('/telecharger/modele-agents', [ImportController::class, 'telechargerModeleAgents'])->name('modele-agents');
+            Route::get('/telecharger/modele-agents-combine', [ImportController::class, 'telechargerModeleAgentsCombine'])->name('modele-agents-combine');
 
             // Ayants droit
             Route::get('/ayants-droit', [ImportController::class, 'ayantsDroit'])->name('ayants-droit');
@@ -264,6 +299,45 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/api/ayants-droit', [DemandeController::class, 'apiAyantsDroit'])->name('api.ayants-droit');
             Route::get('/api/partenaires', [DemandeController::class, 'apiPartenaires'])->name('api.partenaires');
             Route::get('/api/verifier-plafond', [DemandeController::class, 'apiVerifierPlafond'])->name('api.verifier-plafond');
+            Route::get('/api/plafond-agent', [DemandeController::class, 'apiPlafondAgent'])->name('api.plafond-agent');
+
+            // DEBUG - À supprimer après résolution
+            Route::get('/debug/ayants-droit', [DemandeController::class, 'debugAyantsDroit'])->name('debug.ayants-droit');
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Facturation
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('facturation')->name('facturation.')->group(function () {
+            Route::get('/', [FacturationController::class, 'index'])->name('index');
+            Route::get('/create', [FacturationController::class, 'create'])->name('create');
+            Route::get('/create/{demande_pec}', [FacturationController::class, 'create'])->name('create-from-pec');
+            Route::post('/', [FacturationController::class, 'store'])->name('store');
+            Route::get('/{id}', [FacturationController::class, 'show'])->name('show');
+            Route::get('/{id}/telecharger', [FacturationController::class, 'telechargerPdf'])->name('telecharger');
+            Route::delete('/{id}', [FacturationController::class, 'destroy'])->name('destroy');
+
+            // API AJAX
+            Route::get('/api/pec-search', [FacturationController::class, 'apiPecSearch'])->name('api.pec-search');
+            Route::get('/api/pec-details/{id}', [FacturationController::class, 'apiPecDetails'])->name('api.pec-details');
+            Route::get('/api/verifier-plafond', [FacturationController::class, 'apiVerifierPlafond'])->name('api.verifier-plafond');
+
+            // Vérification session pour diagnostic
+            Route::get('/api/check-session', function () {
+                return response()->json([
+                    'authenticated' => auth()->check(),
+                    'user_id' => auth()->id(),
+                    'session_id' => session()->getId(),
+                    'session_has_token' => session()->has('_token'),
+                    'csrf_token' => csrf_token(),
+                    'session_lifetime' => config('session.lifetime'),
+                    'time_remaining' => session()->get('last_activity')
+                        ? (config('session.lifetime') * 60) - (now()->timestamp - session()->get('last_activity'))
+                        : null,
+                ]);
+            })->name('api.check-session');
         });
     });
 

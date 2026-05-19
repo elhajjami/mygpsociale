@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Imports\AgentsSapImport;
+use App\Imports\AgentsSapDataImport;
+use App\Imports\AgentsAyantsDroitsCombineImport;
 use App\Imports\AyantsDroitImport;
+use App\Imports\CgsDataImport;
 use App\Models\EcartSapCgs;
 use App\Services\EcartSapService;
 use App\Services\PlafondService;
@@ -66,6 +69,45 @@ class ImportController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Erreur import agents: ' . $e->getMessage());
+
+            return redirect()
+                ->back()
+                ->with('error', 'Erreur lors de l\'importation: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Traitement de l'import des agents SAP avec ayants droit (format combiné)
+     * Les données sont enregistrées dans les tables SAP séparées
+     */
+    public function importAgentsAyantsDroits(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        try {
+            $nomFichier = $request->file('file')->getClientOriginalName();
+            $import = new AgentsSapDataImport($nomFichier);
+            Excel::import($import, $request->file('file'));
+
+            $message = 'Import SAP terminé avec succès ! ';
+            $message .= $import->getAgentsImportedCount() . ' agent(s) SAP importé(s), ';
+            $message .= $import->getAgentsUpdatedCount() . ' agent(s) SAP mis à jour. ';
+            $message .= $import->getAyantsImportedCount() . ' ayant(s) droit SAP importé(s).';
+            $message .= ' Consultez la page Agents pour comparer avec les données CGS.';
+
+            if (!empty($import->getErrors())) {
+                $message .= ' Erreurs: ' . implode('; ', $import->getErrors());
+            }
+
+            return redirect()
+                ->route('admin.import.agents')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur import SAP: ' . $e->getMessage());
 
             return redirect()
                 ->back()
@@ -187,14 +229,59 @@ class ImportController extends Controller
      */
     public function detecterEcarts()
     {
+        $ecartSapService = new \App\Services\EcartSapService();
         $plafondService = new PlafondService();
 
         // Initialiser les plafonds pour l'année courante
         $nouveauxPlafonds = $plafondService->initialiserPlafondsAnnee();
 
+        // Détecter les écarts (âge ≥ 63 ans, statuts incohérents)
+        $resultats = $ecartSapService->detecterEcartsApresImport();
+
+        $message = "Détection terminée : ";
+        $message .= "{$nouveauxPlafonds} plafond(s) initialisé(s). ";
+        $message .= "{$resultats['ages_superieurs_63']} agent(s) âgé(s) ≥ 63 ans.";
+
         return redirect()
             ->route('admin.import.ecarts')
-            ->with('success', "Détection des écarts terminée. {$nouveauxPlafonds} plafond(s) initialisé(s).");
+            ->with('success', $message);
+    }
+
+    /**
+     * Import des données CGS depuis le fichier Excel
+     */
+    public function importCGS(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        try {
+            $import = new CgsDataImport();
+            Excel::import($import, $request->file('file'));
+
+            $message = 'Import CGS terminé avec succès ! ';
+            $message .= $import->getAgentsImportedCount() . ' agent(s) importé(s), ';
+            $message .= $import->getAgentsUpdatedCount() . ' agent(s) mis à jour. ';
+            $message .= $import->getAyantsImportedCount() . ' ayant(s) droit importé(s), ';
+            $message .= $import->getAyantsUpdatedCount() . ' ayant(s) droit mis à jour.';
+
+            if (!empty($import->getErrors())) {
+                $message .= ' Erreurs: ' . implode('; ', $import->getErrors());
+            }
+
+            return redirect()
+                ->route('admin.import.agents')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur import CGS: ' . $e->getMessage());
+
+            return redirect()
+                ->back()
+                ->with('error', 'Erreur lors de l\'importation: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
@@ -211,6 +298,22 @@ class ImportController extends Controller
         }
 
         return response()->download($chemin, 'modele_import_agents.xlsx');
+    }
+
+    /**
+     * Télécharger le modèle de fichier pour import agents + ayants droit (format combiné)
+     */
+    public function telechargerModeleAgentsCombine()
+    {
+        $chemin = public_path('templates/modele_import_agents_ayants_droits.xlsx');
+
+        if (!file_exists($chemin)) {
+            return redirect()
+                ->back()
+                ->with('error', 'Le modèle de fichier n\'est pas disponible.');
+        }
+
+        return response()->download($chemin, 'modele_import_agents_ayants_droits.xlsx');
     }
 
     /**

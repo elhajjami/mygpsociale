@@ -8,12 +8,13 @@ use App\Models\Agent;
 use App\Models\DemandePEC;
 use App\Models\AyantDroit;
 use App\Models\Partenaire;
+use App\Models\PlafondAnnuelAgent;
 use App\Services\PlafondService;
 use App\Services\BonPecPdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class DemandeController extends Controller
 {
@@ -34,7 +35,7 @@ class DemandeController extends Controller
         $dateFin = $request->get('date_fin');
 
         $demandes = DemandePEC::query()
-            ->with(['agent', 'partenaire', 'beneficiaire'])
+            ->with(['agent', 'ayantDroit', 'partenaire'])
             ->when($statut, function ($query, $statut) {
                 return $query->where('statut', $statut);
             })
@@ -81,35 +82,37 @@ class DemandeController extends Controller
      */
     public function store(DemandePECRequest $request)
     {
-        $plafondService = new PlafondService();
-
-        // Vérifier le plafond disponible
-        $disponible = $plafondService->verifierPlafondDisponible(
-            $request->agent_id,
-            $request->montant_devis
-        );
-
-        if (!$disponible) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Le plafond annuel de l\'agent est insuffisant pour cette demande.');
-        }
-
         DB::beginTransaction();
         try {
-            $demande = DemandePEC::create($request->validated() + [
-                'numero_demande' => $this->genererNumeroDemande(),
-                'statut' => 'En attente',
-                'cree_par' => Auth::id(),
-            ]);
+            // Gérer le fichier de devis
+            $fichierPath = null;
+            if ($request->hasFile('fichier_devis')) {
+                $fichierPath = $request->file('fichier_devis')->store('devis', 'public');
+            }
 
-            // Mettre à jour le plafond (montant engagé)
-            $plafondService->mettreAJourPlafond(
-                $request->agent_id,
-                $request->montant_devis,
-                'engagement'
-            );
+            // Préparer les données - seulement les champs qui existent dans la table
+            $data = [
+                'agent_id' => $request->agent_id,
+                'beneficiaire_type' => $request->type_beneficiaire,
+                'ayant_droit_id' => $request->ayant_droit_id ?? null,
+                'partenaire_id' => $request->partenaire_id,
+                'type_prestation' => $request->type_prestation,
+                'nature_examens' => $request->nature_examens,
+                'date_soin' => $request->date_soin,
+                'montant_devis' => $request->montant_devis ?? 0,
+                'description' => $request->description,
+                'ville' => $request->ville,
+                'type_structure' => $request->type_structure,
+                'fichier_devis' => $fichierPath,
+                'numero_demande' => $this->genererNumeroDemande($request->type_structure),
+                'statut' => 'En attente de validation',
+                'cree_par' => Auth::id(),
+            ];
+
+            // Log pour le débogage
+            Log::info('Création demande PEC avec données:', $data);
+
+            $demande = DemandePEC::create($data);
 
             DB::commit();
 
@@ -117,11 +120,33 @@ class DemandeController extends Controller
                 ->route('dprh.demandes.show', $demande)
                 ->with('success', 'Demande PEC créée avec succès.');
 
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Database\QueryException $e) {
             DB::rollBack();
+
+            // Log l'erreur détaillée
+            Log::error('Erreur SQL création demande PEC: ' . $e->getMessage(), [
+                'request_data' => $request->all()
+            ]);
+
             return redirect()
                 ->back()
                 ->withInput()
+                ->withErrors(['partenaire_id' => 'Erreur lors de la création: ' . $e->getMessage()])
+                ->with('error', 'Erreur lors de la création: ' . $e->getMessage());
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log l'erreur détaillée
+            Log::error('Erreur création demande PEC: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['agent_id' => 'Erreur lors de la création: ' . $e->getMessage()])
                 ->with('error', 'Erreur lors de la création: ' . $e->getMessage());
         }
     }
@@ -134,11 +159,10 @@ class DemandeController extends Controller
         $demande = DemandePEC::with([
             'agent',
             'agent.ayantsDroit',
+            'ayantDroit',
             'partenaire',
-            'beneficiaire',
             'createur',
             'validateur',
-            'documents',
         ])->findOrFail($id);
 
         // Vérifier le plafond disponible
@@ -402,7 +426,7 @@ class DemandeController extends Controller
     {
         $demande = DemandePEC::with([
             'agent',
-            'beneficiaire',
+            'ayantDroit',
             'partenaire',
         ])->findOrFail($id);
 
@@ -425,7 +449,7 @@ class DemandeController extends Controller
     {
         $demande = DemandePEC::with([
             'agent',
-            'beneficiaire',
+            'ayantDroit',
             'partenaire',
         ])->findOrFail($id);
 
@@ -441,6 +465,7 @@ class DemandeController extends Controller
             'montant_devis' => number_format($demande->montant_devis, 2, ',', ' '),
             'montant_regle' => $demande->montant_regle ? number_format($demande->montant_regle, 2, ',', ' ') : null,
             'agent' => $demande->agent,
+            'agent_date_naissance' => $demande->agent->date_naissance?->format('d/m/Y') ?? '-',
             'beneficiaire_type' => $demande->beneficiaire_type === 'ayant_droit' ? 'Ayant droit' : 'Agent',
             'beneficiaire_nom' => $beneficiaire->nom . ' ' . $beneficiaire->prenom,
             'beneficiaire_date_naissance' => $beneficiaire->date_naissance?->format('d/m/Y') ?? '-',
@@ -451,6 +476,56 @@ class DemandeController extends Controller
         ];
 
         return view('pdf.bon-pec', $data);
+    }
+
+    /**
+     * DEBUG: Vérifier les ayants droit d'un agent
+     */
+    public function debugAyantsDroit(Request $request)
+    {
+        $matricule = $request->input('matricule', '9103');
+
+        // Trouver l'agent
+        $agent = \App\Models\Agent::where('matricule', $matricule)->first();
+
+        if (!$agent) {
+            return response()->json(['error' => 'Agent non trouvé'], 404);
+        }
+
+        // Tous les ayants droit pour cet agent
+        $allAyantsDroit = \Illuminate\Support\Facades\DB::table('ayants_droit')
+            ->where('agent_id', $agent->id)
+            ->get();
+
+        // Seulement les ayants droit actifs (via le modèle)
+        $actifsAyantsDroit = AyantDroit::where('agent_id', $agent->id)
+            ->actifs()
+            ->get();
+
+        // Vérifier un ID spécifique si fourni
+        $specificCheck = null;
+        if ($request->has('ayant_droit_id')) {
+            $specificId = $request->input('ayant_droit_id');
+            $specificCheck = [
+                'id' => $specificId,
+                'exists_in_table' => \Illuminate\Support\Facades\DB::table('ayants_droit')->where('id', $specificId)->exists(),
+                'exists_with_trashed' => AyantDroit::withTrashed()->where('id', $specificId)->exists(),
+                'exists_active' => AyantDroit::where('id', $specificId)->where('statut', 'Validé')->exists(),
+                'record' => AyantDroit::withTrashed()->find($specificId),
+            ];
+        }
+
+        return response()->json([
+            'agent' => [
+                'id' => $agent->id,
+                'matricule' => $agent->matricule,
+                'nom' => $agent->nom,
+                'prenom' => $agent->prenom,
+            ],
+            'all_ayants_droit' => $allAyantsDroit,
+            'actifs_ayants_droit' => $actifsAyantsDroit,
+            'specific_check' => $specificCheck,
+        ]);
     }
 
     /**
@@ -472,11 +547,22 @@ class DemandeController extends Controller
                         'nom_complet' => $ad->nom_complet,
                         'lien_parente' => $ad->lien_parente,
                         'date_naissance' => $ad->date_naissance,
+                        'type' => $ad->type,
                     ];
                 });
 
+            // Log pour débogage
+            Log::info('Ayants droit retournés pour agent ' . $request->agent_id, [
+                'count' => $ayantsDroit->count(),
+                'ayants' => $ayantsDroit->toArray(),
+            ]);
+
             return response()->json($ayantsDroit);
         } catch (\Exception $e) {
+            Log::error('Erreur apiAyantsDroit', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'error' => $e->getMessage(),
                 'trace' => config('app.debug') ? $e->getTraceAsString() : null
@@ -514,31 +600,52 @@ class DemandeController extends Controller
         $request->validate([
             'agent_id' => 'required|exists:agents,id',
             'montant' => 'required|numeric|min:0',
+            'type_prestation' => 'nullable|in:consultation,analyse,radiologie,medicament,chirurgie,autre,hospitalisation',
         ]);
 
+        $typePrestation = $request->input('type_prestation', 'consultation');
+
         $plafondService = new PlafondService();
-        $disponible = $plafondService->verifierPlafondDisponible(
+        $resultat = $plafondService->verifierPlafond(
             $request->agent_id,
-            $request->montant
+            $request->montant,
+            $typePrestation
         );
 
-        $plafond = $plafondService->getPlafondAgent($request->agent_id);
+        return response()->json($resultat);
+    }
+
+    /**
+     * Obtenir les informations de plafond d'un agent (API)
+     */
+    public function apiPlafondAgent(Request $request)
+    {
+        $request->validate([
+            'agent_id' => 'required|exists:agents,id',
+        ]);
+
+        $plafond = PlafondAnnuelAgent::obtenirOuCreer($request->agent_id);
 
         return response()->json([
-            'disponible' => $disponible,
-            'plafond_annuel' => $plafond ? $plafond->plafond_annuel : 0,
-            'reste_disponible' => $plafond ? $plafond->reste_disponible : 0,
-            'montant_engage' => $plafond ? $plafond->montant_engage : 0,
-            'montant_consome' => $plafond ? $plafond->montant_consome : 0,
+            'plafond_annuel' => $plafond->plafond_annuel,
+            'consomme_medical' => $plafond->consomme_medical,
+            'consomme_clinique' => $plafond->consomme_clinique,
+            'reste_medical' => $plafond->reste_medical,
+            'reste_clinique' => $plafond->reste_clinique,
+            'pourcentage_utilisation_medical' => $plafond->pourcentage_utilisation_medical,
+            'pourcentage_utilisation_clinique' => $plafond->pourcentage_utilisation_clinique,
         ]);
     }
 
     /**
      * Générer un numéro de demande unique
      */
-    protected function genererNumeroDemande(): string
+    protected function genererNumeroDemande(?string $typeStructure = null): string
     {
-        $prefix = 'PEC-' . now()->format('Ymd');
+        // Déterminer le préfixe selon le type de structure
+        // LEC pour clinique, PEC pour médecin/laboratoire/radiologie
+        $prefixe = ($typeStructure === 'clinique') ? 'LEC' : 'PEC';
+        $prefix = $prefixe . '-' . now()->format('Ymd');
         $dernierNumero = DemandePEC::where('numero_demande', 'like', $prefix . '%')
             ->orderBy('id', 'desc')
             ->value('numero_demande');

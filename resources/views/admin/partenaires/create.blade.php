@@ -50,8 +50,10 @@
                 <!-- Spécialité (conditionnelle) -->
                 <div id="specialite-group" class="hidden">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Spécialité *</label>
-                    <input type="text" name="specialite" value="{{ old('specialite') }}"
+                    <select name="specialite" id="specialite"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Sélectionner...</option>
+                    </select>
                     @error('specialite')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -60,9 +62,35 @@
                 <!-- Ville -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Ville *</label>
-                    <input type="text" name="ville" value="{{ old('ville') }}" required
+                    <select name="ville" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Sélectionner...</option>
+                        <option value="Fès" {{ old('ville') == 'Fès' ? 'selected' : '' }}>Fès</option>
+                        <option value="Meknès" {{ old('ville') == 'Meknès' ? 'selected' : '' }}>Meknès</option>
+                    </select>
                     @error('ville')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Téléphone -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                    <input type="text" name="telephone" value="{{ old('telephone') }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: 0612345678">
+                    @error('telephone')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" value="{{ old('email') }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: contact@exemple.com">
+                    @error('email')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
@@ -110,6 +138,124 @@
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">{{ old('observations') }}</textarea>
                 </div>
 
+                <!-- Section Facturation -->
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Informations de Facturation</h3>
+
+                    <div class="space-y-4">
+                        <!-- Adresse -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                            <textarea name="adresse" rows="2"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Adresse complète">{{ old('adresse') }}</textarea>
+                            @error('adresse')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Fax -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Fax</label>
+                                <input type="text" name="fax" value="{{ old('fax') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Ex: 051234567">
+                                @error('fax')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- CNSS -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">CNSS</label>
+                                <input type="text" name="cnss" value="{{ old('cnss') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Numéro CNSS">
+                                @error('cnss')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- ICE -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ICE (Identifiant Commun de l'Entreprise)</label>
+                            <input type="text" name="ice" value="{{ old('ice') }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Ex: 001234567891234">
+                            @error('ice')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Patente -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Patente</label>
+                                <input type="text" name="patente" value="{{ old('patente') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Numéro de patente">
+                                @error('patente')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- IF (Identifiant Fiscal) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">IF (Identifiant Fiscal)</label>
+                                <input type="text" name="if" value="{{ old('if') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Numéro IF">
+                                @error('if')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Coordonnées bancaires -->
+                        <div class="border-t pt-4">
+                            <h4 class="text-md font-medium text-gray-800 mb-3">Coordonnées Bancaires</h4>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- Banque -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Banque</label>
+                                    <input type="text" name="banque" value="{{ old('banque') }}"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Nom de la banque">
+                                    @error('banque')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <!-- Agence -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Agence</label>
+                                    <input type="text" name="agence" value="{{ old('agence') }}"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Agence bancaire">
+                                    @error('agence')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <!-- RIB -->
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">RIB (Relevé d'Identité Bancaire)</label>
+                                <input type="text" name="rib" value="{{ old('rib') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="24 caractères"
+                                    maxlength="24">
+                                @error('rib')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Actions -->
                 <div class="flex justify-end gap-4 pt-4 border-t">
                     <a href="{{ route('admin.partenaires.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
@@ -126,12 +272,70 @@
 
 @push('scripts')
 <script>
+    // Définition des spécialités par type
+    const specialitesParType = {
+        clinique: [
+            { value: 'Multidisciplinaire', label: 'Multidisciplinaire' }
+        ],
+        laboratoire: [
+            { value: 'Biologie médicale', label: 'Biologie médicale' }
+        ],
+        médecin: [
+            { value: 'Cardiologie', label: 'Cardiologie' },
+            { value: 'Dermatologie', label: 'Dermatologie' },
+            { value: 'Gastro-entérologie', label: 'Gastro-entérologie' },
+            { value: 'Gynécologie', label: 'Gynécologie' },
+            { value: 'Médecine générale', label: 'Médecine générale' },
+            { value: 'Médecine interne', label: 'Médecine interne' },
+            { value: 'Néphrologie', label: 'Néphrologie' },
+            { value: 'Neurologie', label: 'Neurologie' },
+            { value: 'Ophtalmologie', label: 'Ophtalmologie' },
+            { value: 'ORL', label: 'ORL' },
+            { value: 'Pédiatrie', label: 'Pédiatrie' },
+            { value: 'Pneumologie', label: 'Pneumologie' },
+            { value: 'Psychiatrie', label: 'Psychiatrie' },
+            { value: 'Radiologie', label: 'Radiologie' },
+            { value: 'Rhumatologie', label: 'Rhumatologie' },
+            { value: 'Stomatologie', label: 'Stomatologie' },
+            { value: 'Chirurgie générale', label: 'Chirurgie générale' },
+            { value: 'Chirurgie orthopédique', label: 'Chirurgie orthopédique' }
+        ]
+    };
+
+    const oldSpecialite = "{{ old('specialite') }}";
+
     document.getElementById('type_structure').addEventListener('change', function() {
         const specialiteGroup = document.getElementById('specialite-group');
-        if (this.value === 'médecin') {
+        const specialiteSelect = document.getElementById('specialite');
+
+        // Cacher le groupe
+        specialiteGroup.classList.add('hidden');
+
+        // Réinitialiser le select
+        specialiteSelect.innerHTML = '<option value="">Sélectionner...</option>';
+
+        if (specialitesParType[this.value]) {
+            // Afficher le groupe
             specialiteGroup.classList.remove('hidden');
-        } else {
-            specialiteGroup.classList.add('hidden');
+
+            // Ajouter les options
+            specialitesParType[this.value].forEach(function(spec) {
+                const option = document.createElement('option');
+                option.value = spec.value;
+                option.textContent = spec.label;
+                if (spec.value === oldSpecialite) {
+                    option.selected = true;
+                }
+                specialiteSelect.appendChild(option);
+            });
+        }
+    });
+
+    // Déclencher le changement au chargement si une valeur est présélectionnée
+    window.addEventListener('DOMContentLoaded', function() {
+        const typeSelect = document.getElementById('type_structure');
+        if (typeSelect.value) {
+            typeSelect.dispatchEvent(new Event('change'));
         }
     });
 </script>

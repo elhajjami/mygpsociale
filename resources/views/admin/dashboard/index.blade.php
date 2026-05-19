@@ -57,12 +57,12 @@
         </div>
 
         <!-- Écarts non traités -->
-        <div class="bg-white rounded-lg shadow p-6">
+        <a href="{{ route('admin.import.ecarts') }}" class="bg-white rounded-lg shadow p-6 block hover:shadow-lg transition-shadow">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Écarts SAP/CGS</p>
                     <p class="text-2xl font-bold text-gray-900">{{ number_format($statistiques['ecarts']['non_trites']) }}</p>
-                    <p class="text-sm text-orange-600">À traiter</p>
+                    <p class="text-sm text-orange-600">À traiter →</p>
                 </div>
                 <div class="p-3 bg-orange-100 rounded-full">
                     <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,7 +70,7 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Consommation des plafonds -->
@@ -80,21 +80,22 @@
             <div class="space-y-4">
                 <div class="flex justify-between items-center">
                     <span class="text-gray-600">Plafond Total</span>
-                    <span class="font-semibold">{{ number_format($statistiques['montants']['engage'] + $statistiques['montants']['consome'], 2) }} DH</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-600">Montant Engagé</span>
-                    <span class="font-semibold text-blue-600">{{ number_format($statistiques['montants']['engage'], 2) }} DH</span>
+                    <span class="font-semibold">{{ number_format($statistiques['montants']['plafond_total'], 2) }} DH</span>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-gray-600">Montant Consommé</span>
-                    <span class="font-semibold text-green-600">{{ number_format($statistiques['montants']['consome'], 2) }} DH</span>
+                    <span class="font-semibold text-blue-600">{{ number_format($statistiques['montants']['consome'], 2) }} DH</span>
                 </div>
-                @if($statistiques['montants']['engage'] + $statistiques['montants']['consome'] > 0)
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Reste Disponible</span>
+                    <span class="font-semibold text-green-600">{{ number_format($statistiques['montants']['plafond_total'] - $statistiques['montants']['consome'], 2) }} DH</span>
+                </div>
+                @if($statistiques['montants']['plafond_total'] > 0)
                 <div class="pt-2">
                     <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ min(100, ($statistiques['montants']['engage'] + $statistiques['montants']['consome']) / max(1, $statistiques['montants']['engage'] + $statistiques['montants']['consome']) * 100) }}%"></div>
+                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ min(100, ($statistiques['montants']['consome'] / max(1, $statistiques['montants']['plafond_total'])) * 100) }}%"></div>
                     </div>
+                    <p class="text-xs text-gray-500 mt-1 text-right">{{ number_format(($statistiques['montants']['consome'] / max(1, $statistiques['montants']['plafond_total'])) * 100, 1) }}% utilisé</p>
                 </div>
                 @endif
             </div>
@@ -113,7 +114,7 @@
                     <div class="w-full bg-gray-200 rounded-full h-2">
                         <div class="bg-blue-600 h-2 rounded-full" style="width: {{ min(100, $data['pourcentage']) }}%"></div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">{{ number_format($data['consome'] + $data['engage'], 2) }} / {{ number_format($data['plafond_total'], 2) }} DH</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ number_format($data['consome'], 2) }} / {{ number_format($data['plafond_total'], 2) }} DH</p>
                 </div>
                 @endforeach
             </div>
@@ -217,6 +218,7 @@
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Écarts Non Traités</h3>
             <div class="overflow-x-auto">
+                @forelse($ecartsRecents as $ecart)
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -235,6 +237,14 @@
                         @endforeach
                     </tbody>
                 </table>
+                @empty
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="mt-2">Aucun écart non traité</p>
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>

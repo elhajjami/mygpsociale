@@ -41,7 +41,7 @@ class AgentsSapImport implements ToCollection, WithHeadingRow, WithValidation
                 'date_sortie' => $this->parseDate($row['date_sortie'] ?? null),
                 'date_retraite' => $this->parseDate($row['date_retraite'] ?? null),
                 'numero_immatriculation' => $row['numero_immatriculation'] ?? $row['immatriculation'] ?? null,
-                'numero_affiliation' => $row['numero_affiliation'] ?? $row['affiliation'] ?? null,
+                'date_affiliation' => $this->parseDate($row['date_affiliation'] ?? $row['affiliation'] ?? null),
             ];
 
             $existingAgent = Agent::where('matricule', $matricule)->first();

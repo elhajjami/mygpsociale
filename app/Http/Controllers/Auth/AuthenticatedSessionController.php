@@ -26,7 +26,9 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
-        $request->session()->regenerate();
+        // Suppression de la régénération de session pour éviter les pertes de session
+        // lors de requêtes AJAX simultanées (recherche PEC, vérification plafond, etc.)
+        // $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));
     }

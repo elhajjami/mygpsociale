@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Models\PlafondAnnuel;
+use App\Models\PlafondAnnuelAgent;
+
 class Agent extends Model
 {
     use SoftDeletes;
@@ -16,30 +19,32 @@ class Agent extends Model
         'nom',
         'prenom',
         'cin',
+        'date_recrutement',
         'date_naissance',
-        'categorie',
-        'niveau',
-        'degre',
         'dp_affectation',
-        'population',
         'statut',
         'situation_administrative', // Pour stocker les codes de mesure (DE, SU, etc.)
         'date_entree',
         'date_sortie',
         'date_retraite',
         'numero_immatriculation',
-        'numero_affiliation',
+        'date_affiliation',
+        'compte_bancaire',
+        'cle_bancaire',
+        'banque',
+        'info_banque',
         'observations',
         'user_id',
-        'categorie_calculee', // Catégorie calculée depuis le niveau
         'statut_calcule', // Statut calculé depuis la situation
     ];
 
     protected $casts = [
+        'date_recrutement' => 'date',
         'date_naissance' => 'date',
         'date_entree' => 'date',
         'date_sortie' => 'date',
         'date_retraite' => 'date',
+        'date_affiliation' => 'date',
     ];
 
     /**
@@ -59,11 +64,29 @@ class Agent extends Model
     }
 
     /**
-     * Relation avec les plafonds annuels
+     * Relation avec les plafonds annuels par catégorie
      */
     public function plafondsAnnuels(): HasMany
     {
         return $this->hasMany(PlafondAnnuel::class);
+    }
+
+    /**
+     * Relation avec les plafonds annuels par année de consommation
+     */
+    public function plafondsAnnuelsAgents(): HasMany
+    {
+        return $this->hasMany(PlafondAnnuelAgent::class);
+    }
+
+    /**
+     * Obtenir le plafond annuel de l'année courante
+     */
+    public function getPlafondAnneeCouranteAttribute(): ?PlafondAnnuelAgent
+    {
+        return $this->plafondsAnnuelsAgents()
+            ->where('annee', now()->year)
+            ->first();
     }
 
     /**
@@ -115,11 +138,11 @@ class Agent extends Model
     }
 
     /**
-     * Obtenir le plafond annuel selon la catégorie
+     * Obtenir le plafond annuel selon la catégorie (depuis la carrière)
      */
     public function getPlafondAnnuelAttribute(): float
     {
-        $categorie = $this->categorie ?? 'Exécution';
+        $categorie = $this->getCategorieFromCarriere();
         return PlafondCategorie::getPlafond($categorie);
     }
 
@@ -185,11 +208,6 @@ class Agent extends Model
             }
         }
 
-        // Vérifier si la population est "DE" (Départ)
-        if ($this->population === 'DE') {
-            return 'Sorti';
-        }
-
         // Vérifier la date de retraite
         if ($this->date_retraite && $this->date_retraite->isPast()) {
             return 'Retraité';
@@ -204,11 +222,10 @@ class Agent extends Model
     }
 
     /**
-     * Mettre à jour la catégorie et le statut calculés
+     * Mettre à jour le statut calculé
      */
     public function mettreAJourCalculs(): void
     {
-        $this->categorie_calculee = $this->calculerCategorie();
         $this->statut_calcule = $this->calculerStatut();
         $this->saveQuietly();
     }

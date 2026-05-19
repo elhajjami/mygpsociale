@@ -70,19 +70,19 @@
                 <!-- Rôles -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Rôles
+                        Rôle
                     </label>
                     <div class="space-y-2">
-                        @foreach($roles as $role)
+                        @foreach($roles as $roleKey => $roleLabel)
                         <label class="flex items-center">
-                            <input type="checkbox" name="roles[]" value="{{ $role->id }}"
+                            <input type="radio" name="role" value="{{ $roleKey }}"
                                 class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                @if(in_array($role->id, $userRoles)) checked @endif>
-                            <span class="ml-2 text-sm text-gray-700">{{ $role->name }}</span>
+                                @if($user->role === $roleKey) checked @endif>
+                            <span class="ml-2 text-sm text-gray-700">{{ $roleLabel }}</span>
                         </label>
                         @endforeach
                     </div>
-                    @error('roles')
+                    @error('role')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>

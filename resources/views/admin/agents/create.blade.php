@@ -54,42 +54,15 @@
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Informations professionnelles</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <x-input-label for="categorie" :value="__('Catégorie')" />
-                                <select id="categorie" name="categorie" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                    <option value="">Sélectionner...</option>
-                                    <option value="Exécution">Exécution</option>
-                                    <option value="Maîtrise">Maîtrise</option>
-                                    <option value="Cadre">Cadre</option>
-                                    <option value="Hors cadre">Hors cadre</option>
-                                </select>
-                                <x-input-error :messages="$errors->get('categorie')" class="mt-2" />
-                            </div>
-
-                            <div>
-                                <x-input-label for="niveau" :value="__('Niveau')" />
-                                <x-input id="niveau" name="niveau" type="text" class="mt-1 block w-full" />
-                                <x-input-error :messages="$errors->get('niveau')" class="mt-2" />
-                            </div>
-
-                            <div>
-                                <x-input-label for="degre" :value="__('Degré')" />
-                                <x-input id="degre" name="degre" type="text" class="mt-1 block w-full" />
-                                <x-input-error :messages="$errors->get('degre')" class="mt-2" />
+                                <x-input-label for="date_recrutement" :value="__('Date de recrutement')" />
+                                <x-input id="date_recrutement" name="date_recrutement" type="date" class="mt-1 block w-full" />
+                                <x-input-error :messages="$errors->get('date_recrutement')" class="mt-2" />
                             </div>
 
                             <div>
                                 <x-input-label for="dp_affectation" :value="__('DP / Affectation')" />
                                 <x-input id="dp_affectation" name="dp_affectation" type="text" class="mt-1 block w-full" />
                                 <x-input-error :messages="$errors->get('dp_affectation')" class="mt-2" />
-                            </div>
-
-                            <div>
-                                <x-input-label for="population" :value="__('Population')" />
-                                <select id="population" name="population" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    <option value="autre">Autre</option>
-                                    <option value="BO">BO</option>
-                                </select>
-                                <x-input-error :messages="$errors->get('population')" class="mt-2" />
                             </div>
 
                             <div>
@@ -141,9 +114,39 @@
                             </div>
 
                             <div>
-                                <x-input-label for="numero_affiliation" :value="__('Numéro d\'affiliation')" />
-                                <x-input id="numero_affiliation" name="numero_affiliation" type="text" class="mt-1 block w-full" />
-                                <x-input-error :messages="$errors->get('numero_affiliation')" class="mt-2" />
+                                <x-input-label for="date_affiliation" :value="__('Date d\'affiliation')" />
+                                <x-input id="date_affiliation" name="date_affiliation" type="date" class="mt-1 block w-full" />
+                                <x-input-error :messages="$errors->get('date_affiliation')" class="mt-2" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coordonnées bancaires -->
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Coordonnées bancaires</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-input-label for="banque" :value="__('Banque')" />
+                                <x-input id="banque" name="banque" type="text" class="mt-1 block w-full" />
+                                <x-input-error :messages="$errors->get('banque')" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="compte_bancaire" :value="__('Compte bancaire')" />
+                                <x-input id="compte_bancaire" name="compte_bancaire" type="text" class="mt-1 block w-full" />
+                                <x-input-error :messages="$errors->get('compte_bancaire')" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="cle_bancaire" :value="__('Clé bancaire')" />
+                                <x-input id="cle_bancaire" name="cle_bancaire" type="text" class="mt-1 block w-full" />
+                                <x-input-error :messages="$errors->get('cle_bancaire')" class="mt-2" />
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <x-input-label for="info_banque" :value="__('Informations bancaires')" />
+                                <textarea id="info_banque" name="info_banque" rows="2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                                <x-input-error :messages="$errors->get('info_banque')" class="mt-2" />
                             </div>
                         </div>
                     </div>

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DemandePEC;
 use App\Models\EcartSapCgs;
 use App\Models\Agent;
-use App\Models\PlafondAnnuel;
+use App\Models\PlafondAnnuelAgent;
 use App\Services\PlafondService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +38,8 @@ class DashboardController extends Controller
                 'expirees' => DemandePEC::expirees()->count(),
             ],
             'montants' => [
-                'engage' => PlafondAnnuel::where('annee', $annee)->sum('montant_engage'),
-                'consome' => PlafondAnnuel::where('annee', $annee)->sum('montant_consome'),
+                'plafond_total' => PlafondAnnuelAgent::where('annee', $annee)->sum('plafond_annuel'),
+                'consome' => PlafondAnnuelAgent::where('annee', $annee)->sum('consomme'),
             ],
             'ecarts' => [
                 'non_trites' => EcartSapCgs::nonTraites()->count(),
@@ -88,29 +88,78 @@ class DashboardController extends Controller
     }
 
     /**
-     * Obtenir la consommation par catégorie
+     * Obtenir la consommation par catégorie (depuis la dernière carrière)
      */
     protected function getConsommationParCategorie(int $annee): array
     {
         $categories = ['Exécution', 'Maîtrise', 'Cadre', 'Hors cadre'];
         $resultats = [];
 
+        // Récupérer les dernières carrières de tous les agents
+        $dernieresCarrieres = DB::select("
+            SELECT c1.matricule, c1.niv
+            FROM carrieres c1
+            WHERE c1.id = (
+                SELECT MAX(c2.id)
+                FROM carrieres c2
+                WHERE c2.matricule = c1.matricule
+            )
+        ");
+
+        // Grouper par catégorie
+        $parCategorie = [];
         foreach ($categories as $categorie) {
-            $agents = Agent::where('categorie', $categorie)->pluck('id');
-            $plafonds = PlafondAnnuel::whereIn('agent_id', $agents)
+            $parCategorie[$categorie] = [];
+        }
+
+        foreach ($dernieresCarrieres as $carriere) {
+            $prefixe = strtoupper(substr($carriere->niv, 0, 1));
+            $categorie = match($prefixe) {
+                'E' => 'Exécution',
+                'M' => 'Maîtrise',
+                'C' => 'Cadre',
+                'H' => 'Hors cadre',
+                default => null,
+            };
+
+            if ($categorie && isset($parCategorie[$categorie])) {
+                $parCategorie[$categorie][] = $carriere->matricule;
+            }
+        }
+
+        // Calculer les statistiques par catégorie
+        foreach ($categories as $categorie) {
+            $matricules = $parCategorie[$categorie];
+
+            if (empty($matricules)) {
+                $resultats[$categorie] = [
+                    'plafond_total' => 0,
+                    'consome' => 0,
+                    'reste' => 0,
+                    'pourcentage' => 0,
+                    'nb_agents' => 0,
+                ];
+                continue;
+            }
+
+            // Récupérer les plafonds annuels pour ces agents
+            $plafonds = PlafondAnnuelAgent::whereIn('agent_id', function($query) use ($matricules) {
+                $query->select('id')
+                    ->from('agents')
+                    ->whereIn('matricule', $matricules);
+            })
                 ->where('annee', $annee)
                 ->get();
 
             $totalPlafond = $plafonds->sum('plafond_annuel');
-            $totalConsome = $plafonds->sum('montant_consome');
-            $totalEngage = $plafonds->sum('montant_engage');
+            $totalConsome = $plafonds->sum('consomme');
 
             $resultats[$categorie] = [
                 'plafond_total' => $totalPlafond,
                 'consome' => $totalConsome,
-                'engage' => $totalEngage,
-                'reste' => $totalPlafond - $totalConsome - $totalEngage,
-                'pourcentage' => $totalPlafond > 0 ? (($totalConsome + $totalEngage) / $totalPlafond) * 100 : 0,
+                'reste' => $totalPlafond - $totalConsome,
+                'pourcentage' => $totalPlafond > 0 ? ($totalConsome / $totalPlafond) * 100 : 0,
+                'nb_agents' => $plafonds->count(),
             ];
         }
 

@@ -38,10 +38,7 @@ class PartenaireController extends Controller
             ->paginate(25)
             ->appends($request->all());
 
-        // Obtenir les villes uniques pour le filtre
-        $villes = Partenaire::select('ville')->distinct()->orderBy('ville')->pluck('ville')->filter();
-
-        return view('admin.partenaires.index', compact('partenaires', 'villes'));
+        return view('admin.partenaires.index', compact('partenaires'));
     }
 
     public function create()
@@ -51,17 +48,37 @@ class PartenaireController extends Controller
 
     public function store(Request $request)
     {
+        $specialites = [
+            'Multidisciplinaire', 'Biologie médicale',
+            'Cardiologie', 'Dermatologie', 'Gastro-entérologie', 'Gynécologie',
+            'Médecine générale', 'Médecine interne', 'Néphrologie', 'Neurologie',
+            'Ophtalmologie', 'ORL', 'Pédiatrie', 'Pneumologie', 'Psychiatrie',
+            'Radiologie', 'Rhumatologie', 'Stomatologie', 'Chirurgie générale', 'Chirurgie orthopédique'
+        ];
+
         $validated = $request->validate([
             'numero_convention' => 'required|string|max:50|unique:partenaires,numero_convention',
             'nom' => 'required|string|max:200',
             'type_structure' => 'required|in:clinique,laboratoire,médecin,radiologie',
-            'ville' => 'required|string|max:100',
-            'specialite' => 'nullable|string|max:100|required_if:type_structure,médecin',
+            'ville' => 'required|in:Fès,Meknès',
+            'specialite' => 'nullable|in:' . implode(',', $specialites) . '|required_if:type_structure,clinique,laboratoire,médecin',
+            'telephone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:150',
             'date_effet' => 'nullable|date',
             'date_fin' => 'nullable|date|after:date_effet',
             'statut' => 'required|in:active,expirée,suspendue,résiliée',
             'coordonnees' => 'nullable|string',
             'observations' => 'nullable|string',
+            // Champs facturation
+            'adresse' => 'nullable|string|max:500',
+            'fax' => 'nullable|string|max:20',
+            'rib' => 'nullable|string|max:24',
+            'banque' => 'nullable|string|max:100',
+            'agence' => 'nullable|string|max:100',
+            'ice' => 'nullable|string|max:20',
+            'patente' => 'nullable|string|max:50',
+            'if' => 'nullable|string|max:20',
+            'cnss' => 'nullable|string|max:30',
         ]);
 
         Partenaire::create($validated);
@@ -90,17 +107,37 @@ class PartenaireController extends Controller
     {
         $partenaire = Partenaire::findOrFail($id);
 
+        $specialites = [
+            'Multidisciplinaire', 'Biologie médicale',
+            'Cardiologie', 'Dermatologie', 'Gastro-entérologie', 'Gynécologie',
+            'Médecine générale', 'Médecine interne', 'Néphrologie', 'Neurologie',
+            'Ophtalmologie', 'ORL', 'Pédiatrie', 'Pneumologie', 'Psychiatrie',
+            'Radiologie', 'Rhumatologie', 'Stomatologie', 'Chirurgie générale', 'Chirurgie orthopédique'
+        ];
+
         $validated = $request->validate([
             'numero_convention' => 'required|string|max:50|unique:partenaires,numero_convention,' . $id,
             'nom' => 'required|string|max:200',
             'type_structure' => 'required|in:clinique,laboratoire,médecin,radiologie',
-            'ville' => 'required|string|max:100',
-            'specialite' => 'nullable|string|max:100',
+            'ville' => 'required|in:Fès,Meknès',
+            'specialite' => 'nullable|in:' . implode(',', $specialites),
+            'telephone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:150',
             'date_effet' => 'nullable|date',
             'date_fin' => 'nullable|date|after:date_effet',
             'statut' => 'required|in:active,expirée,suspendue,résiliée',
             'coordonnees' => 'nullable|string',
             'observations' => 'nullable|string',
+            // Champs facturation
+            'adresse' => 'nullable|string|max:500',
+            'fax' => 'nullable|string|max:20',
+            'rib' => 'nullable|string|max:24',
+            'banque' => 'nullable|string|max:100',
+            'agence' => 'nullable|string|max:100',
+            'ice' => 'nullable|string|max:20',
+            'patente' => 'nullable|string|max:50',
+            'if' => 'nullable|string|max:20',
+            'cnss' => 'nullable|string|max:30',
         ]);
 
         $partenaire->update($validated);
@@ -125,10 +162,18 @@ class PartenaireController extends Controller
      */
     public function apiParVilleEtType(Request $request)
     {
+        $specialites = [
+            'Multidisciplinaire', 'Biologie médicale',
+            'Cardiologie', 'Dermatologie', 'Gastro-entérologie', 'Gynécologie',
+            'Médecine générale', 'Médecine interne', 'Néphrologie', 'Neurologie',
+            'Ophtalmologie', 'ORL', 'Pédiatrie', 'Pneumologie', 'Psychiatrie',
+            'Radiologie', 'Rhumatologie', 'Stomatologie', 'Chirurgie générale', 'Chirurgie orthopédique'
+        ];
+
         $request->validate([
-            'ville' => 'required|string',
+            'ville' => 'required|in:Fès,Meknès',
             'type_structure' => 'required|in:clinique,laboratoire,médecin,radiologie',
-            'specialite' => 'nullable|string',
+            'specialite' => 'nullable|in:' . implode(',', $specialites),
         ]);
 
         $partenaires = Partenaire::actifs()
@@ -148,26 +193,23 @@ class PartenaireController extends Controller
      */
     public function villes()
     {
-        $villes = Partenaire::select('ville')
-            ->distinct()
-            ->orderBy('ville')
-            ->pluck('ville')
-            ->filter();
+        $villes = ['Fès', 'Meknès'];
 
         return response()->json($villes);
     }
 
     /**
-     * Obtenir les spécialités pour les médecins
+     * Obtenir les spécialités pour les médecins, cliniques et laboratoires
      */
     public function specialites()
     {
-        $specialites = Partenaire::where('type_structure', 'médecin')
-            ->select('specialite')
-            ->distinct()
-            ->orderBy('specialite')
-            ->pluck('specialite')
-            ->filter();
+        $specialites = [
+            'Multidisciplinaire', 'Biologie médicale',
+            'Cardiologie', 'Dermatologie', 'Gastro-entérologie', 'Gynécologie',
+            'Médecine générale', 'Médecine interne', 'Néphrologie', 'Neurologie',
+            'Ophtalmologie', 'ORL', 'Pédiatrie', 'Pneumologie', 'Psychiatrie',
+            'Radiologie', 'Rhumatologie', 'Stomatologie', 'Chirurgie générale', 'Chirurgie orthopédique'
+        ];
 
         return response()->json($specialites);
     }

@@ -22,10 +22,36 @@
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Informations personnelles -->
                     <div class="bg-white rounded-lg shadow">
-                        <div class="p-4 border-b border-gray-200">
+                        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
                             <h3 class="text-lg font-medium text-gray-900">Informations personnelles</h3>
+                            @if(isset($correspond))
+                                @if($correspond)
+                                    <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">✓ Correspond SAP</span>
+                                @elseif($agentSap)
+                                    <span class="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full">⚠ Diffère de SAP</span>
+                                @else
+                                    <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">✗ Absent dans SAP</span>
+                                @endif
+                            @endif
                         </div>
                         <div class="p-4">
+                            @if(isset($differences) && $differences)
+                            <div class="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <h4 class="text-sm font-medium text-orange-900 mb-2">⚠ Différences détectées avec SAP</h4>
+                                <dl class="space-y-1 text-sm">
+                                    @foreach($differences as $champ => $vals)
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">{{ ucfirst($champ) }} :</span>
+                                            <span>
+                                                <span class="line-through text-red-600">{{ $vals['cgs'] ?? 'N/A' }}</span>
+                                                <span class="mx-1">→</span>
+                                                <span class="text-green-600 font-medium">{{ $vals['sap'] ?? 'N/A' }}</span>
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            </div>
+                            @endif
                             <dl class="grid grid-cols-2 gap-4">
                                 <div>
                                     <dt class="text-sm text-gray-500">Matricule</dt>
@@ -36,22 +62,34 @@
                                     <dd class="text-sm font-medium text-gray-900">{{ $agent->cin ?? 'N/A' }}</dd>
                                 </div>
                                 <div>
-                                    <dt class="text-sm text-gray-500">Nom</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->nom }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500">Prénom</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->prenom ?? 'N/A' }}</dd>
+                                    <dt class="text-sm text-gray-500">Nom complet</dt>
+                                    <dd class="text-sm font-medium text-gray-900">
+                                        {{ $agent->nom_complet }}
+                                        @if(isset($differences['nom']))
+                                            <span class="text-xs text-orange-600 ml-2">(SAP: {{ $differences['nom']['sap'] }})</span>
+                                        @endif
+                                    </dd>
                                 </div>
                                 <div>
                                     <dt class="text-sm text-gray-500">Date de naissance</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->date_naissance?->format('d/m/Y') ?? 'N/A' }}</dd>
+                                    <dd class="text-sm font-medium text-gray-900">
+                                        {{ $agent->date_naissance?->format('d/m/Y') ?? 'N/A' }}
+                                        @if(isset($differences['date_naissance']))
+                                            <span class="text-xs text-orange-600 ml-2">(SAP: {{ is_string($differences['date_naissance']['sap']) ? $differences['date_naissance']['sap'] : $differences['date_naissance']['sap']->format('d/m/Y') }})</span>
+                                        @endif
+                                    </dd>
                                 </div>
                                 <div>
                                     <dt class="text-sm text-gray-500">Âge</dt>
                                     <dd class="text-sm font-medium text-gray-900">{{ $agent->age ?? 'N/A' }} ans</dd>
                                 </div>
                             </dl>
+                            @if(isset($agentSap))
+                            <div class="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+                                <p>Dernier import SAP: {{ $agentSap->date_import_sap?->format('d/m/Y H:i') ?? 'N/A' }}</p>
+                                <p>Fichier: {{ $agentSap->fichier_import ?? 'N/A' }}</p>
+                            </div>
+                            @endif
                         </div>
                     </div>
 
@@ -63,16 +101,8 @@
                         <div class="p-4">
                             <dl class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <dt class="text-sm text-gray-500">Catégorie</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->categorie }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500">Niveau</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->niveau ?? 'N/A' }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500">Degré</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->degre ?? 'N/A' }}</dd>
+                                    <dt class="text-sm text-gray-500">Date de recrutement</dt>
+                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->date_recrutement?->format('d/m/Y') ?? 'N/A' }}</dd>
                                 </div>
                                 <div>
                                     <dt class="text-sm text-gray-500">DP / Affectation</dt>
@@ -89,11 +119,45 @@
                                         </span>
                                     </dd>
                                 </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500">Population</dt>
-                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->population ?? 'N/A' }}</dd>
-                                </div>
                             </dl>
+                        </div>
+                    </div>
+
+                    <!-- Coordonnées bancaires -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="p-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">Coordonnées bancaires</h3>
+                        </div>
+                        <div class="p-4">
+                            <dl class="grid grid-cols-2 gap-4">
+                                @if($agent->banque)
+                                <div>
+                                    <dt class="text-sm text-gray-500">Banque</dt>
+                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->banque }}</dd>
+                                </div>
+                                @endif
+                                @if($agent->compte_bancaire)
+                                <div>
+                                    <dt class="text-sm text-gray-500">Compte bancaire</dt>
+                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->compte_bancaire }}</dd>
+                                </div>
+                                @endif
+                                @if($agent->cle_bancaire)
+                                <div>
+                                    <dt class="text-sm text-gray-500">Clé bancaire</dt>
+                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->cle_bancaire }}</dd>
+                                </div>
+                                @endif
+                                @if($agent->info_banque)
+                                <div class="col-span-2">
+                                    <dt class="text-sm text-gray-500">Informations bancaires</dt>
+                                    <dd class="text-sm font-medium text-gray-900">{{ $agent->info_banque }}</dd>
+                                </div>
+                                @endif
+                            </dl>
+                            @if(!$agent->banque && !$agent->compte_bancaire && !$agent->cle_bancaire && !$agent->info_banque)
+                            <p class="text-sm text-gray-500 text-center py-2">Aucune information bancaire enregistrée</p>
+                            @endif
                         </div>
                     </div>
 
@@ -101,25 +165,82 @@
                     <div class="bg-white rounded-lg shadow">
                         <div class="p-4 border-b border-gray-200 flex justify-between items-center">
                             <h3 class="text-lg font-medium text-gray-900">Ayants droit</h3>
-                            <span class="text-sm text-gray-500">{{ $agent->ayantsDroit->count() }} inscrit(s)</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500">{{ $agent->ayantsDroit->count() }} inscrit(s)</span>
+                                <a href="{{ route('admin.agents.ayants-droit.create', $agent) }}" class="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                                    + Ajouter
+                                </a>
+                            </div>
                         </div>
                         <div class="p-4">
                             @if($agent->ayantsDroit->count() > 0)
                                 <div class="space-y-2">
                                     @foreach($agent->ayantsDroit as $ayantDroit)
                                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div>
+                                            <div class="flex-1">
                                                 <p class="text-sm font-medium text-gray-900">{{ $ayantDroit->nom_prenom }}</p>
-                                                <p class="text-xs text-gray-500">{{ $ayantDroit->type }} - {{ $ayantDroit->date_naissance?->format('d/m/Y') ?? 'N/A' }}</p>
+                                                <p class="text-xs text-gray-500">
+                                                    {{ ucfirst($ayantDroit->type) }}
+                                                    @if($ayantDroit->date_naissance) - {{ $ayantDroit->date_naissance->format('d/m/Y') }} ({{ $ayantDroit->age ?? '?' }} ans) @endif
+                                                    @if($ayantDroit->cin) - CIN: {{ $ayantDroit->cin }} @endif
+                                                </p>
                                             </div>
-                                            <span class="px-2 py-1 text-xs rounded-full {{ $ayantDroit->statut === 'Validé' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
-                                                {{ $ayantDroit->statut }}
-                                            </span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-1 text-xs rounded-full
+                                                    @if($ayantDroit->statut === 'Validé') bg-green-100 text-green-800
+                                                    @elseif($ayantDroit->statut === 'En attente') bg-yellow-100 text-yellow-800
+                                                    @else bg-red-100 text-red-800
+                                                    @endif">
+                                                    {{ $ayantDroit->statut }}
+                                                </span>
+                                                <!-- Actions rapides -->
+                                                <div class="flex items-center gap-1">
+                                                    @if($ayantDroit->statut !== 'Validé')
+                                                    <form method="POST" action="{{ route('admin.ayants-droit.valider', $ayantDroit) }}" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="p-1 text-green-600 hover:bg-green-100 rounded" title="Valider">
+                                                            ✓
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                    @if($ayantDroit->statut !== 'En attente')
+                                                    <form method="POST" action="{{ route('admin.ayants-droit.mettre-en-attente', $ayantDroit) }}" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="p-1 text-yellow-600 hover:bg-yellow-100 rounded" title="Mettre en attente">
+                                                            ⏸
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                    @if($ayantDroit->statut !== 'Rejeté')
+                                                    <form method="POST" action="{{ route('admin.ayants-droit.rejeter', $ayantDroit) }}" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="p-1 text-red-600 hover:bg-red-100 rounded" title="Rejeter">
+                                                            ✗
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                    <a href="{{ route('admin.ayants-droit.edit', $ayantDroit) }}" class="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Modifier">
+                                                        ✎
+                                                    </a>
+                                                    <form method="POST" action="{{ route('admin.ayants-droit.destroy', $ayantDroit) }}" class="inline" onsubmit="return confirm('Supprimer cet ayant droit ?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="p-1 text-red-600 hover:bg-red-100 rounded" title="Supprimer">
+                                                            🗑
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
                             @else
-                                <p class="text-sm text-gray-500 text-center py-4">Aucun ayant droit enregistré</p>
+                                <div class="text-center py-6">
+                                    <p class="text-sm text-gray-500 mb-3">Aucun ayant droit enregistré</p>
+                                    <a href="{{ route('admin.agents.ayants-droit.create', $agent) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                                        + Ajouter un ayant droit
+                                    </a>
+                                </div>
                             @endif
                         </div>
                     </div>

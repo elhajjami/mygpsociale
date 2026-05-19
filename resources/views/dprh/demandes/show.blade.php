@@ -7,7 +7,7 @@
 @section('content')
 <div class="max-w-5xl mx-auto space-y-6">
     <div class="flex justify-end space-x-2">
-        @if($demande->statut === 'En attente')
+        @if($demande->statut === 'En attente de validation')
             <a href="{{ route('dprh.demandes.edit', $demande) }}" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
                 Modifier
             </a>
@@ -15,6 +15,12 @@
         @if(in_array($demande->statut, ['Validée', 'Payée']))
             <a href="{{ route('dprh.demandes.imprimer-bon', $demande) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                 Imprimer Bon PEC
+            </a>
+            <a href="{{ route('dprh.facturation.create-from-pec', $demande) }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Créer Facture
             </a>
         @endif
     </div>
@@ -143,7 +149,7 @@
         </div>
 
         <!-- Actions -->
-        @if($demande->statut === 'En attente')
+        @if($demande->statut === 'En attente de validation')
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
                 <form method="POST" action="{{ route('dprh.demandes.valider', $demande) }}">
                     @csrf

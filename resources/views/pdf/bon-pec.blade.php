@@ -13,18 +13,16 @@
 
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 12px;
-            line-height: 1.4;
-            background: #f0f0f0;
-            padding: 20px;
+            font-size: 16px;
+            line-height: 1.2;
+            background: white;
         }
 
         .page {
             width: 210mm;
-            min-height: 297mm;
+            height: 297mm;
             margin: 0 auto;
             background: white;
-            padding: 15mm;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
         }
@@ -32,33 +30,36 @@
         /* En-tête */
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+        }
+
+        .header-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+        }
+
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .header p {
-            font-size: 11px;
+            font-size: 13px;
         }
 
         .header h1 {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
-            margin: 10px 0;
+            margin: 8px 0;
         }
 
         .header h2 {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            margin: 10px 0;
+            margin: 8px 0;
             text-decoration: underline;
-        }
-
-        /* Numéro de demande */
-        .numero-demande {
-            position: absolute;
-            top: 15mm;
-            right: 15mm;
-            font-size: 14px;
-            font-weight: bold;
         }
 
         /* Section renseignements */
@@ -66,27 +67,40 @@
             background: #e8e8e8;
             padding: 5px 10px;
             font-weight: bold;
-            margin: 15px 0 10px 0;
+            margin: 8px 0 5px 0;
             border: 1px solid #333;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .numero-inline {
+            font-weight: bold;
+            font-size: 14px;
         }
 
         /* Tableau principal */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
+            margin: 6px 0;
         }
 
         table td, table th {
             border: 1px solid #333;
-            padding: 5px 8px;
+            padding: 4px 8px;
             vertical-align: middle;
+            font-size: 15px;
+            height: 32px;
         }
 
         table .label {
             background: #f5f5f5;
             font-weight: bold;
-            width: 25%;
+            width: 14%;
+            white-space: nowrap;
+            padding: 4px 6px;
         }
 
         table .value {
@@ -95,13 +109,13 @@
 
         /* Section formation médicale */
         .formation-section {
-            margin: 15px 0;
+            margin: 12px 0;
             border: 1px solid #333;
             padding: 10px;
         }
 
         .formation-section h4 {
-            font-size: 11px;
+            font-size: 15px;
             font-weight: bold;
             margin-bottom: 5px;
             text-align: center;
@@ -115,23 +129,26 @@
 
         .montants-table td {
             border: 1px solid #333;
-            padding: 8px 12px;
+            padding: 8px 10px;
+            font-size: 15px;
+            height: 35px;
         }
 
         .montants-table .montant-label {
             text-align: right;
-            padding-right: 20px;
+            padding-right: 15px;
+            width: 60%;
         }
 
         .montants-table .montant-value {
             font-weight: bold;
             text-align: center;
-            width: 150px;
+            width: 120px;
         }
 
         /* Section visa */
         .visa-section {
-            margin-top: 30px;
+            margin-top: 20px;
             display: flex;
             justify-content: space-between;
         }
@@ -141,46 +158,52 @@
         }
 
         .visa-box h4 {
-            font-size: 11px;
+            font-size: 15px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             border-bottom: 1px solid #333;
-            padding-bottom: 5px;
+            padding-bottom: 4px;
         }
 
         .visa-row {
             display: flex;
-            margin: 5px 0;
+            margin: 4px 0;
         }
 
         .visa-row .label {
-            width: 80px;
+            width: 60px;
             flex-shrink: 0;
+            font-size: 14px;
         }
 
         .visa-row .input {
             flex: 1;
             border-bottom: 1px solid #333;
-            min-height: 20px;
+            min-height: 24px;
+            display: inline-block;
+        }
+
+        .visa-row .input.signature {
+            height: 130px;
+            min-height: 130px;
         }
 
         /* Footer */
         .footer {
-            margin-top: 30px;
-            padding: 15px;
+            margin-top: 15px;
+            padding: 10px;
             border: 2px solid #000;
             background: #f9f9f9;
         }
 
         .footer p {
-            margin: 5px 0;
+            margin: 3px 0;
             text-align: justify;
+            font-size: 12px;
         }
 
         .footer-number {
-            position: absolute;
-            bottom: 15mm;
-            left: 15mm;
+            margin-top: 10px;
             font-size: 10px;
             color: #666;
         }
@@ -188,14 +211,15 @@
         /* Bordure */
         .border-outer {
             border: 3px solid #000;
-            padding: 20px;
-            min-height: 250mm;
+            padding: 15px;
+            margin: 12mm;
         }
 
         @media print {
             body {
                 background: white;
                 padding: 0;
+                margin: 0;
             }
             .page {
                 box-shadow: none;
@@ -205,7 +229,7 @@
 
         @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 0;
         }
     </style>
 </head>
@@ -214,19 +238,23 @@
         <div class="border-outer">
             <!-- En-tête -->
             <div class="header">
-                <p>══════════════════════════════════════════════════════════════════════════════</p>
-                <h1>SOCIÉTÉ ROYAUME DE MAROC</h1>
-                <h2>BON DE PRISE EN CHARGE</h2>
+                <div class="header-logo">
+                    <img src="{{ public_path('images/logo.png') }}" alt="Logo SRM">
+                </div>
+                <h1>Société Régionale Multi Services Fès-Meknès</h1>
+                @if(isset($partenaire) && $partenaire->type_structure === 'clinique')
+                    <h2>LETTRE DE PRISE EN CHARGE</h2>
+                @else
+                    <h2>BON DE PRISE EN CHARGE</h2>
+                @endif
                 <p>Renseignements individuels</p>
             </div>
 
-            <!-- Numéro de demande -->
-            <div class="numero-demande">
-                N° <strong>{{ $numero_demande }}</strong>
-            </div>
-
             <!-- Section Agent -->
-            <div class="section-title">DEMANDE DE PRISE EN CHARGE</div>
+            <div class="section-title">
+                DEMANDE DE PRISE EN CHARGE-
+                <span class="numero-inline">N° {{ $numero_demande }}</span>
+            </div>
 
             <table>
                 <tr>
@@ -245,7 +273,7 @@
                     <td class="label">Mle</td>
                     <td class="value">{{ $agent->matricule ?? '' }}</td>
                     <td class="label">Date de naissance</td>
-                    <td class="value">{{ $agent->date_naissance ?? '-' }}</td>
+                    <td class="value">{{ $agent_date_naissance }}</td>
                 </tr>
                 <tr>
                     <td class="label">Service</td>
@@ -267,7 +295,7 @@
                     <td class="label">Lien de parenté avec l'agent</td>
                     <td class="value">{{ $lien_parente }}</td>
                     <td class="label">Date de naissance</td>
-                    <td class="value">{{ $beneficiaire_date_naissance }}</td>
+                    <td class="value">{{ $beneficiaire_date_naissance ?? '-' }}</td>
                 </tr>
             </table>
 
@@ -335,7 +363,7 @@
                     </div>
                     <div class="visa-row">
                         <span class="label">Signature:</span>
-                        <span class="input"></span>
+                        <span class="input signature"></span>
                     </div>
                 </div>
 
@@ -347,7 +375,7 @@
                     </div>
                     <div class="visa-row">
                         <span class="label">Signature:</span>
-                        <span class="input"></span>
+                        <span class="input signature"></span>
                     </div>
                 </div>
             </div>
@@ -357,8 +385,8 @@
                 <p><strong>IMPORTANT:</strong></p>
                 <p>1. La vérification par le cabinet de l'identité du bénéficiaire de la présente prise en charge est exigée.</p>
                 <p>2. La présente prise en charge doit obligatoirement accompagner la facture, établie en 4 exemplaires originaux signés et cachetés, qui sera adressée pour paiement à SRM.</p>
-                <p>3. L'octroi de cette prise en charge ne constitue pas un engagement de paiement préalable de la facture.</p>
-                <p>4. La validité de ce bon est de 30 jours à compter de la date d'émission.</p>
+                <p>3. L'octroi de cette prise en charge ne signifie nullement la gratuité de la prestation. Il s'agit seulement d'une substitution de l'Employeur au paiement dans l'immédiat. La régularisation se fera ultérieurement.</p>
+                <p>4. Toute prise en charge non utilisée doit être retournée à l'Employeur pour annulation.</p>
             </div>
 
             <div class="footer-number">

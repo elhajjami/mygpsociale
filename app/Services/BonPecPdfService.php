@@ -59,6 +59,7 @@ class BonPecPdfService
 
             // Agent
             'agent' => $demande->agent,
+            'agent_date_naissance' => $demande->agent->date_naissance?->format('d/m/Y') ?? '-',
 
             // Bénéficiaire
             'beneficiaire_type' => $demande->beneficiaire_type === 'ayant_droit' ? 'Ayant droit' : 'Agent',
