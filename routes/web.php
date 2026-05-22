@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('profil')->name('profile.')->group(function () {
         Route::get('/', [ProfileController::class, 'edit'])->name('edit');
         Route::put('/', [ProfileController::class, 'update'])->name('update');
+        Route::put('/photo', [ProfileController::class, 'updatePhoto'])->name('photo.update');
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
     });
 
@@ -79,6 +80,12 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+        /*
+        |--------------------------------------------------------------------------
+        | Profil Admin
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/profil', [ProfileController::class, 'adminEdit'])->name('profile.edit');
 
         /*
         |--------------------------------------------------------------------------
